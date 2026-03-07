@@ -284,10 +284,10 @@ async function createUser(event) {
   };
 }
 
-// Export route map
-export const authRoutes = {
-  'POST /auth/login': login,
-  'POST /auth/refresh': refresh,
-  'POST /auth/logout': logout,
-  'POST /admin/create-user': createUser,
-};
+// Export route definitions as [method, path, handler] tuples
+export const authRoutes = [
+  ['POST', '/auth/login', login],
+  ['POST', '/auth/refresh', refresh],
+  ['POST', '/auth/logout', logout],
+  ['POST', '/admin/create-user', createUser],
+];

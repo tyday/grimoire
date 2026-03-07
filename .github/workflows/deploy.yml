@@ -43,9 +43,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
 
+      # Use the prod state key — separate from dev so they don't interfere
       - name: Terraform Init
         working-directory: infra
-        run: terraform init
+        run: terraform init -backend-config="key=grimoire/prod/terraform.tfstate"
 
       - name: Terraform Apply
         working-directory: infra
@@ -98,7 +99,7 @@ jobs:
         id: tf
         working-directory: infra
         run: |
-          terraform init
+          terraform init -backend-config="key=grimoire/prod/terraform.tfstate"
           echo "bucket=$(terraform output -raw frontend_bucket_name)" >> "$GITHUB_OUTPUT"
           echo "distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_OUTPUT"
 

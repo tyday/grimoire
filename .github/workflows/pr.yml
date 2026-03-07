@@ -79,9 +79,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
 
+      # Use the dev state key for PR checks — we plan against dev to validate
       - name: Terraform Init
         working-directory: infra
-        run: terraform init
+        run: terraform init -backend-config="key=grimoire/dev/terraform.tfstate"
 
       # Run plan and save output. The `continue-on-error` means the workflow
       # won't fail if the plan itself fails — we still want to post the

@@ -27,8 +27,17 @@ terraform {
   # ---------------------------------------------------------------------------
   # Terraform tracks every resource it creates in a "state file." By default
   # this is a local file (terraform.tfstate), but for a team project we store
-  # it in S3 so everyone shares the same state. DynamoDB provides locking so
-  # two people can't apply changes simultaneously.
+  # it in S3 so everyone shares the same state.
+  #
+  # We use "partial backend configuration" — the `key` is NOT set here.
+  # Instead, it's passed at `terraform init` time so each environment gets
+  # its own independent state file:
+  #
+  #   terraform init -backend-config="key=grimoire/dev/terraform.tfstate"
+  #   terraform init -backend-config="key=grimoire/prod/terraform.tfstate"
+  #
+  # This prevents dev and prod from sharing state, which would cause
+  # Terraform to destroy dev resources when applying prod (and vice versa).
   #
   # IMPORTANT: You must create this S3 bucket manually BEFORE running
   # `terraform init`. This is a chicken-and-egg problem — Terraform can't
@@ -38,11 +47,11 @@ terraform {
   #   aws s3api create-bucket --bucket grimoire-terraform-state --region us-east-2 --create-bucket-configuration LocationConstraint=us-east-2
   # ---------------------------------------------------------------------------
   backend "s3" {
-    bucket         = "grimoire-terraform-state"
-    key            = "grimoire/terraform.tfstate" # Path inside the bucket
-    region         = "us-east-2"
-    use_lockfile   = true                          # Native S3 state locking (replaces DynamoDB)
-    encrypt        = true                          # Encrypt state at rest
+    bucket       = "grimoire-terraform-state"
+    region       = "us-east-2"
+    use_lockfile = true   # Native S3 state locking
+    encrypt      = true   # Encrypt state at rest
+    # key is provided at init time — see above
   }
 }
 

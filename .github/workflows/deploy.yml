@@ -1,0 +1,118 @@
+# =============================================================================
+# deploy.yml — Deploys to production on push to main
+# =============================================================================
+# This workflow runs after a PR is merged to main. It:
+#   1. Applies any Terraform infrastructure changes
+#   2. Builds the React frontend
+#   3. Syncs the built files to S3
+#   4. Invalidates the CloudFront cache so users get the new version
+#
+# The jobs run sequentially: infra first (in case the frontend depends on
+# new resources), then the frontend deploy.
+# =============================================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+# Only one deploy can run at a time. If a second push to main happens while
+# a deploy is in progress, it queues up rather than running in parallel.
+# This prevents race conditions in Terraform state.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false  # Don't cancel in-progress deploys
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Apply Terraform changes
+  # ---------------------------------------------------------------------------
+  terraform:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: terraform apply -var-file="environments/prod.tfvars" -auto-approve
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Build and deploy the frontend
+  # ---------------------------------------------------------------------------
+  # This job waits for Terraform to finish (needs: [terraform]) because:
+  #   - Terraform might create the S3 bucket or CloudFront distribution
+  #   - We need the outputs (bucket name, distribution ID) for the deploy
+  #
+  # In practice, after the first deploy these resources already exist and
+  # Terraform will be a no-op, but the dependency keeps things safe.
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Deploy Frontend
+    needs: [terraform]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      # Read the S3 bucket name and CloudFront distribution ID from Terraform
+      # outputs rather than hardcoding them. This means if we change bucket
+      # names in Terraform, the deploy pipeline adapts automatically.
+      - name: Get Terraform Outputs
+        id: tf
+        working-directory: infra
+        run: |
+          terraform init
+          echo "bucket=$(terraform output -raw frontend_bucket_name)" >> "$GITHUB_OUTPUT"
+          echo "distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_OUTPUT"
+
+      # Sync the built files to S3. The --delete flag removes files from S3
+      # that no longer exist in the build output (prevents stale files).
+      - name: Sync to S3
+        working-directory: frontend
+        run: aws s3 sync dist/ s3://${{ steps.tf.outputs.bucket }} --delete
+
+      # Tell CloudFront to drop its cache so users get the new version.
+      # "/*" means invalidate everything. For a small site this is fine.
+      # (AWS gives you 1,000 free invalidation paths per month.)
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.tf.outputs.distribution_id }} \
+            --paths "/*"

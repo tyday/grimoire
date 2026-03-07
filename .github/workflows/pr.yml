@@ -1,0 +1,118 @@
+# =============================================================================
+# pr.yml — Runs on every pull request
+# =============================================================================
+# This workflow validates changes before they're merged to main:
+#   1. Builds the React frontend (catches compile errors)
+#   2. Runs Terraform plan (shows what infra changes would happen)
+#   3. Posts the Terraform plan as a PR comment so reviewers can see it
+#
+# This workflow does NOT deploy anything — it's read-only and safe.
+# =============================================================================
+
+name: PR Checks
+
+# Trigger on pull requests targeting main
+on:
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same PR (saves Actions minutes)
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Build and lint the frontend
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Set up Node using the version from .nvmrc so it stays in sync
+      # with what developers use locally
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci  # ci = "clean install", faster and stricter than npm install
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Terraform plan
+  # ---------------------------------------------------------------------------
+  # Shows what infrastructure changes would be applied, without applying them.
+  # The plan output is posted as a PR comment so reviewers can see exactly
+  # what resources will be created, modified, or destroyed.
+  # ---------------------------------------------------------------------------
+  terraform:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    # These permissions let the workflow:
+    #   - Read the repo contents
+    #   - Post comments on the PR (for the plan output)
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      # Configure AWS credentials from GitHub Secrets.
+      # These are the grimoire-github-actions IAM user credentials.
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init
+
+      # Run plan and save output. The `continue-on-error` means the workflow
+      # won't fail if the plan itself fails — we still want to post the
+      # error message as a comment so the PR author can see what went wrong.
+      - name: Terraform Plan
+        id: plan
+        working-directory: infra
+        run: terraform plan -var-file="environments/dev.tfvars" -no-color
+        continue-on-error: true
+
+      # Post the plan output as a PR comment. This uses the GitHub API
+      # directly via the built-in GITHUB_TOKEN.
+      - name: Post Plan to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### Terraform Plan 📖
+            \`\`\`
+            ${{ steps.plan.outputs.stdout }}
+            \`\`\`
+
+            *Plan: \`${{ steps.plan.outcome }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+      # Fail the workflow if the plan failed (after posting the comment)
+      - name: Check Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1

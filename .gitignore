@@ -4,6 +4,7 @@
 *.tfstate.backup
 *.tfstate.*.backup
 *.tfplan
+**/.build/
 
 # Environment-specific secrets
 *.auto.tfvars

@@ -28,3 +28,13 @@ output "site_url" {
   description = "The live site URL"
   value       = "https://${var.domain_name}"
 }
+
+output "api_url" {
+  description = "The API URL (custom domain)"
+  value       = "https://api.${var.domain_name}"
+}
+
+output "lambda_function_name" {
+  description = "Lambda function name — used by CI/CD to deploy new code"
+  value       = aws_lambda_function.api.function_name
+}

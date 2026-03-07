@@ -17,6 +17,7 @@
 
 import { db } from '../lib/db.mjs';
 import { authenticate } from '../lib/auth.mjs';
+import { notifyAllExcept, notifyAll } from '../lib/push.mjs';
 import { randomUUID } from 'node:crypto';
 
 const TABLE_POLLS = process.env.TABLE_POLLS;
@@ -93,6 +94,9 @@ async function createPoll(event) {
     TableName: TABLE_POLLS,
     Item: poll,
   });
+
+  // Notify everyone except the creator that a new poll was created
+  notifyAllExcept(user.sub, 'New Poll', `${title} — vote on your availability`).catch(console.error);
 
   return {
     statusCode: 201,
@@ -304,6 +308,9 @@ async function confirmPoll(event) {
     TableName: TABLE_SESSIONS,
     Item: session,
   });
+
+  // Notify everyone that a session date has been confirmed
+  notifyAll('Session Confirmed', `${poll.title} — ${confirmedDate}`).catch(console.error);
 
   return {
     statusCode: 200,

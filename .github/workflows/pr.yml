@@ -90,7 +90,12 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: infra
-        run: terraform plan -var-file="environments/dev.tfvars" -var="jwt_secret=${{ secrets.JWT_SECRET }}" -no-color
+        run: |
+          terraform plan -var-file="environments/dev.tfvars" \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="vapid_public_key=${{ secrets.VAPID_PUBLIC_KEY }}" \
+            -var="vapid_private_key=${{ secrets.VAPID_PRIVATE_KEY }}" \
+            -no-color
         continue-on-error: true
 
       # Post the plan output as a PR comment. This uses the GitHub API

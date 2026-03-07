@@ -45,3 +45,14 @@ variable "jwt_secret" {
   type        = string
   sensitive   = true # Prevents Terraform from showing this value in logs/plan output
 }
+
+variable "vapid_public_key" {
+  description = "VAPID public key for Web Push notifications"
+  type        = string
+}
+
+variable "vapid_private_key" {
+  description = "VAPID private key for Web Push notifications"
+  type        = string
+  sensitive   = true
+}

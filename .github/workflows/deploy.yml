@@ -46,7 +46,12 @@ jobs:
 
       - name: Terraform Apply
         working-directory: infra
-        run: terraform apply -var-file="environments/prod.tfvars" -var="jwt_secret=${{ secrets.JWT_SECRET }}" -auto-approve
+        run: |
+          terraform apply -var-file="environments/prod.tfvars" \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="vapid_public_key=${{ secrets.VAPID_PUBLIC_KEY }}" \
+            -var="vapid_private_key=${{ secrets.VAPID_PRIVATE_KEY }}" \
+            -auto-approve
 
   # ---------------------------------------------------------------------------
   # Job 2: Build and deploy the backend (Lambda)

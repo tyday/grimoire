@@ -28,6 +28,10 @@ export default defineConfig({
       // at install time, so the app works offline immediately.
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Import our push notification handler into the generated service worker.
+        // importScripts runs at the top of sw.js, making our push event
+        // listeners available alongside workbox's caching logic.
+        importScripts: ['sw-push.js'],
       },
 
       // The manifest tells the browser how to display the app when installed

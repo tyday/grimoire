@@ -176,6 +176,7 @@ resource "aws_lambda_function" "api" {
       TABLE_POLLS          = aws_dynamodb_table.polls.name
       TABLE_RESPONSES      = aws_dynamodb_table.responses.name
       TABLE_SESSIONS       = aws_dynamodb_table.sessions.name
+      JWT_SECRET           = var.jwt_secret
     }
   }
 

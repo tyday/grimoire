@@ -1,0 +1,20 @@
+{
+  "name": "grimoire-api",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/index.mjs --bundle --platform=node --target=node22 --outfile=dist/index.mjs --format=esm --external:@aws-sdk",
+    "test": "node --test src/**/*.test.mjs"
+  },
+  "dependencies": {
+    "jose": "^6.0.0",
+    "bcryptjs": "^3.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "@aws-sdk/client-ses": "^3.0.0"
+  }
+}

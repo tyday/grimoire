@@ -39,3 +39,9 @@ variable "hosted_zone_name" {
   description = "The Route 53 hosted zone that already exists for your domain (e.g., habernashing.com)"
   type        = string
 }
+
+variable "jwt_secret" {
+  description = "Secret key for signing JWT access tokens (min 32 characters)"
+  type        = string
+  sensitive   = true # Prevents Terraform from showing this value in logs/plan output
+}

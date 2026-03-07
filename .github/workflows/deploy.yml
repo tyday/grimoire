@@ -3,12 +3,8 @@
 # =============================================================================
 # This workflow runs after a PR is merged to main. It:
 #   1. Applies any Terraform infrastructure changes
-#   2. Builds the React frontend
-#   3. Syncs the built files to S3
-#   4. Invalidates the CloudFront cache so users get the new version
-#
-# The jobs run sequentially: infra first (in case the frontend depends on
-# new resources), then the frontend deploy.
+#   2. Builds and deploys the backend (Lambda)
+#   3. Builds and deploys the frontend (S3 + CloudFront)
 # =============================================================================
 
 name: Deploy
@@ -50,17 +46,66 @@ jobs:
 
       - name: Terraform Apply
         working-directory: infra
-        run: terraform apply -var-file="environments/prod.tfvars" -auto-approve
+        run: terraform apply -var-file="environments/prod.tfvars" -var="jwt_secret=${{ secrets.JWT_SECRET }}" -auto-approve
 
   # ---------------------------------------------------------------------------
-  # Job 2: Build and deploy the frontend
+  # Job 2: Build and deploy the backend (Lambda)
   # ---------------------------------------------------------------------------
-  # This job waits for Terraform to finish (needs: [terraform]) because:
-  #   - Terraform might create the S3 bucket or CloudFront distribution
-  #   - We need the outputs (bucket name, distribution ID) for the deploy
-  #
-  # In practice, after the first deploy these resources already exist and
-  # Terraform will be a no-op, but the dependency keeps things safe.
+  # Bundles the Node.js code with esbuild, zips it, and uploads to Lambda.
+  # esbuild bundles all our source files + node_modules into a single file,
+  # which means faster Lambda cold starts (one file to load, not hundreds).
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Deploy Backend
+    needs: [terraform]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: backend/.nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Build
+        working-directory: backend
+        run: npm run build
+
+      - name: Package
+        working-directory: backend
+        run: cd dist && zip -j ../lambda.zip index.mjs
+
+      - name: Get Lambda function name
+        id: tf
+        working-directory: infra
+        run: |
+          terraform init -backend-config="key=grimoire/prod/terraform.tfstate"
+          echo "function_name=$(terraform output -raw lambda_function_name)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Lambda
+        working-directory: backend
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ steps.tf.outputs.function_name }} \
+            --zip-file fileb://lambda.zip \
+            --output text --query 'LastUpdateStatus'
+
+  # ---------------------------------------------------------------------------
+  # Job 3: Build and deploy the frontend
   # ---------------------------------------------------------------------------
   frontend:
     name: Deploy Frontend
@@ -92,9 +137,6 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      # Read the S3 bucket name and CloudFront distribution ID from Terraform
-      # outputs rather than hardcoding them. This means if we change bucket
-      # names in Terraform, the deploy pipeline adapts automatically.
       - name: Get Terraform Outputs
         id: tf
         working-directory: infra
@@ -103,15 +145,10 @@ jobs:
           echo "bucket=$(terraform output -raw frontend_bucket_name)" >> "$GITHUB_OUTPUT"
           echo "distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_OUTPUT"
 
-      # Sync the built files to S3. The --delete flag removes files from S3
-      # that no longer exist in the build output (prevents stale files).
       - name: Sync to S3
         working-directory: frontend
         run: aws s3 sync dist/ s3://${{ steps.tf.outputs.bucket }} --delete
 
-      # Tell CloudFront to drop its cache so users get the new version.
-      # "/*" means invalidate everything. For a small site this is fine.
-      # (AWS gives you 1,000 free invalidation paths per month.)
       - name: Invalidate CloudFront Cache
         run: |
           aws cloudfront create-invalidation \

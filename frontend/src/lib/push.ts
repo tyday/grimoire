@@ -55,7 +55,7 @@ export async function subscribeToPush(accessToken: string): Promise<boolean> {
     // Subscribe to push (or get existing subscription)
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true, // Required: promise to show a notification for every push
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
+      applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
     });
 
     // Send the subscription to our backend

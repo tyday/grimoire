@@ -1,16 +1,46 @@
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
+import { AuthProvider, useAuth } from './lib/auth.tsx';
+import Layout from './components/Layout.tsx';
+import Login from './pages/Login.tsx';
+import Dashboard from './pages/Dashboard.tsx';
+import Polls from './pages/Polls.tsx';
+import CreatePoll from './pages/CreatePoll.tsx';
+import PollDetail from './pages/PollDetail.tsx';
+import Sessions from './pages/Sessions.tsx';
 
-function App() {
-  return (
-    <div className="app">
-      <h1>Grimoire</h1>
-      <p className="subtitle">Campaign Companion</p>
-      <div className="status">
-        <span className="dot" />
-        <span>System online</span>
+function AppRoutes() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <h1 className="loading-brand">Grimoire</h1>
       </div>
-    </div>
-  )
+    );
+  }
+
+  if (!user) return <Login />;
+
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<Dashboard />} />
+        <Route path="polls" element={<Polls />} />
+        <Route path="polls/new" element={<CreatePoll />} />
+        <Route path="polls/:pollId" element={<PollDetail />} />
+        <Route path="sessions" element={<Sessions />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}

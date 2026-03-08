@@ -16,11 +16,28 @@ import { pollRoutes } from './routes/polls.mjs';
 import { pushRoutes } from './routes/push.mjs';
 import { sessionRoutes } from './routes/sessions.mjs';
 
+// Build-time constants injected by esbuild --define.
+// These are replaced with literal strings at build time.
+// If not defined (e.g., local dev), they fall back to 'unknown'.
+const BUILD_VERSION = typeof __BUILD_VERSION__ !== 'undefined' ? __BUILD_VERSION__ : 'unknown';
+const BUILD_TIME = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'unknown';
+const startedAt = new Date().toISOString();
+
 // Route definitions: each entry is [method, pattern, handler].
 // Patterns can include :params which match any path segment.
 const routeDefinitions = [
   // Health check
   ['GET', '/health', async () => ({ statusCode: 200, body: { status: 'ok' } })],
+
+  // Info endpoint — returns version, build time, environment, and uptime
+  ['GET', '/info', async () => ({
+    body: {
+      version: BUILD_VERSION,
+      buildTime: BUILD_TIME,
+      environment: process.env.ENVIRONMENT || 'unknown',
+      startedAt,
+    },
+  })],
 
   // Auth routes
   ...authRoutes,

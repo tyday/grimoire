@@ -1,0 +1,26 @@
+meta {
+  name: Register
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "token": "{{inviteToken}}",
+    "email": "newplayer@test.com",
+    "password": "password123",
+    "name": "New Player"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("accessToken", res.body.accessToken);
+  }
+}

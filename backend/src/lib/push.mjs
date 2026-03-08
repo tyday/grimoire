@@ -94,6 +94,46 @@ export async function notifyAll(title, body, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Send a notification to a specific user (all their devices)
+// ---------------------------------------------------------------------------
+export async function notifyUser(userId, title, body, options = {}) {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.warn('VAPID keys not configured, skipping push notifications');
+    return;
+  }
+
+  // Query subscriptions for this specific user
+  const result = await db.query({
+    TableName: TABLE_PUSH_SUBS,
+    KeyConditionExpression: 'userId = :userId',
+    ExpressionAttributeValues: { ':userId': userId },
+  });
+
+  const subscriptions = result.Items || [];
+  if (subscriptions.length === 0) return;
+
+  const payload = JSON.stringify({ title, body, ...options });
+
+  await Promise.allSettled(
+    subscriptions.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: sub.keys },
+          payload,
+        );
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await db.delete({
+            TableName: TABLE_PUSH_SUBS,
+            Key: { userId: sub.userId, endpoint: sub.endpoint },
+          }).catch(() => {});
+        }
+      }
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Send a notification to all users EXCEPT a specific one
 // ---------------------------------------------------------------------------
 // Used when a user creates a poll — they don't need to be notified about

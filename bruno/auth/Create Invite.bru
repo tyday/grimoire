@@ -1,0 +1,21 @@
+meta {
+  name: Create Invite
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/admin/invite
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("inviteToken", res.body.token);
+  }
+}

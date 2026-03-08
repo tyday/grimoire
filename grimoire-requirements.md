@@ -17,13 +17,14 @@ Features are delivered in phases. Each phase is independently deployable and usa
 | Phase | Feature | Status |
 |-------|---------|--------|
 | 1 | Scheduling | ✅ Complete |
-| 2 | Runtime Caching & Offline | |
-| 3 | Campaigns | |
-| 4 | Session Notes | |
-| 5 | Character Sheets | |
-| 6 | Real-Time Group Chat | |
-| 7 | Map Sharing | |
-| 8 | Campaign Wiki / Lore | |
+| 2 | Tests | |
+| 3 | Runtime Caching & Offline | |
+| 4 | Campaigns | |
+| 5 | Session Notes | |
+| 6 | Character Sheets | |
+| 7 | Real-Time Group Chat | |
+| 8 | Map Sharing | |
+| 9 | Campaign Wiki / Lore | |
 
 ---
 
@@ -68,7 +69,28 @@ Features are delivered in phases. Each phase is independently deployable and usa
 
 ---
 
-## Phase 2: Runtime Caching & Offline
+## Phase 2: Tests
+
+Add backend and frontend test coverage for Phase 1 features.
+
+### Backend (Node.js built-in test runner)
+- **Library unit tests** — JWT creation/verification, password hashing, ICS generation
+- **Route handler tests** — auth flows, poll CRUD, session queries (with mocked DynamoDB)
+
+### Frontend (Vitest + React Testing Library)
+- **Component tests** — Login, Dashboard, PollDetail, Sessions, CreatePoll
+- **API client tests** — token refresh logic, error handling
+- **Auth context tests** — login/logout state management
+
+### Build Order
+1. Backend lib tests (auth, passwords, ics)
+2. Frontend test infrastructure (vitest, RTL, jsdom)
+3. Frontend component tests
+4. Add test steps to CI (PR workflow)
+
+---
+
+## Phase 3: Runtime Caching & Offline
 
 Add workbox runtime caching so previously-viewed data is available offline (read-only).
 
@@ -89,7 +111,7 @@ Add workbox runtime caching so previously-viewed data is available offline (read
 
 ---
 
-## Phase 3: Campaigns
+## Phase 4: Campaigns
 
 Introduce multi-campaign support. Players can belong to multiple campaigns. Sessions, polls, notes, characters, and maps are scoped to a campaign.
 
@@ -120,18 +142,18 @@ Introduce multi-campaign support. Players can belong to multiple campaigns. Sess
 
 ---
 
-## Phase 4: Session Notes
+## Phase 5: Session Notes
 
 - Any member can create/edit notes for a session (campaign-scoped)
 - Notes are associated with a confirmed session
 - **Markdown editing** with preview
 - Notes are readable by all campaign members
 - Push notification when new notes are posted
-- Cached offline via Phase 2 runtime caching
+- Cached offline via Phase 3 runtime caching
 
 ---
 
-## Phase 5: Character Sheets
+## Phase 6: Character Sheets
 
 Pathfinder 1e structured character sheets, campaign-scoped.
 
@@ -153,11 +175,11 @@ Pathfinder 1e structured character sheets, campaign-scoped.
 - Each player owns their sheet(s) — one per character per campaign
 - GM can view all sheets in the campaign
 - PDF/image upload as supplement
-- Cached offline via Phase 2 runtime caching
+- Cached offline via Phase 3 runtime caching
 
 ---
 
-## Phase 6: Real-Time Group Chat
+## Phase 7: Real-Time Group Chat
 
 - One chat channel per campaign
 - Real-time messaging via WebSockets (AWS API Gateway WebSocket API)
@@ -168,7 +190,7 @@ Pathfinder 1e structured character sheets, campaign-scoped.
 
 ---
 
-## Phase 7: Map Sharing
+## Phase 8: Map Sharing
 
 - Upload image files as maps (JPG, PNG, WebP) — stored in S3, served via CloudFront
 - Interactive layer: add named pins/markers to maps
@@ -180,7 +202,7 @@ Pathfinder 1e structured character sheets, campaign-scoped.
 
 ---
 
-## Phase 8: Campaign Wiki / Lore
+## Phase 9: Campaign Wiki / Lore
 
 - Simple wiki for campaign lore, NPCs, locations, factions
 - Any campaign member can create and edit entries

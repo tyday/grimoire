@@ -45,6 +45,11 @@ export default defineConfig({
     __BUILD_VERSION__: JSON.stringify(gitSha),
     __BUILD_TIME__: JSON.stringify(buildTime),
   },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    globals: true,
+  },
   plugins: [
     react(),
     stampSwVersion(),

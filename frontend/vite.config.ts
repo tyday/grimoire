@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, type Plugin } from 'vitest/config'
 import { execSync } from 'child_process'
 import { readFileSync, writeFileSync } from 'fs'
 import { resolve } from 'path'
@@ -44,6 +44,11 @@ export default defineConfig({
   define: {
     __BUILD_VERSION__: JSON.stringify(gitSha),
     __BUILD_TIME__: JSON.stringify(buildTime),
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    globals: true,
   },
   plugins: [
     react(),

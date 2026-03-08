@@ -48,8 +48,36 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Test
+        working-directory: frontend
+        run: npm test
+
   # ---------------------------------------------------------------------------
-  # Job 2: Terraform plan
+  # Job 2: Backend tests
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Test
+        working-directory: backend
+        run: npm test
+
+  # ---------------------------------------------------------------------------
+  # Job 3: Terraform plan
   # ---------------------------------------------------------------------------
   # Shows what infrastructure changes would be applied, without applying them.
   # The plan output is posted as a PR comment so reviewers can see exactly

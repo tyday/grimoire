@@ -294,7 +294,7 @@ export default function PollDetail() {
           <div className="response-list">
             {responses.map((r) => (
               <div key={r.userId} className="response-row">
-                <span className="response-user">{r.userId === user?.userId ? 'You' : r.userId.slice(0, 8)}</span>
+                <span className="response-user">{r.userId === user?.userId ? 'You' : r.userName || r.userId.slice(0, 8)}</span>
                 <span className="response-time">
                   {new Date(r.respondedAt).toLocaleDateString()}
                 </span>

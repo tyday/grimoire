@@ -92,6 +92,8 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "${aws_dynamodb_table.polls.arn}/index/*",
           "${aws_dynamodb_table.responses.arn}",
           "${aws_dynamodb_table.responses.arn}/index/*",
+          "${aws_dynamodb_table.invites.arn}",
+          "${aws_dynamodb_table.invites.arn}/index/*",
           "${aws_dynamodb_table.sessions.arn}",
           "${aws_dynamodb_table.sessions.arn}/index/*",
         ]
@@ -176,6 +178,7 @@ resource "aws_lambda_function" "api" {
       TABLE_POLLS          = aws_dynamodb_table.polls.name
       TABLE_RESPONSES      = aws_dynamodb_table.responses.name
       TABLE_SESSIONS       = aws_dynamodb_table.sessions.name
+      TABLE_INVITES        = aws_dynamodb_table.invites.name
       JWT_SECRET           = var.jwt_secret
       VAPID_PUBLIC_KEY     = var.vapid_public_key
       VAPID_PRIVATE_KEY    = var.vapid_private_key

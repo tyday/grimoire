@@ -766,6 +766,37 @@ a.card:hover {
 }
 
 /* --------------------------------------------------------------------------
+   Invite link box
+   -------------------------------------------------------------------------- */
+.invite-link-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border: 1px dashed var(--gold-dim);
+  border-radius: 8px;
+  background: var(--gold-glow);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s var(--ease);
+}
+.invite-link-box:active {
+  border-color: var(--gold-bright);
+}
+.invite-link-label {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--gold);
+}
+.invite-link-url {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
    Responsive — wider screens
    -------------------------------------------------------------------------- */
 @media (min-width: 768px) {

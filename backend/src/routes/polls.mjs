@@ -20,6 +20,7 @@ import { authenticate } from '../lib/auth.mjs';
 import { notifyAllExcept, notifyAll } from '../lib/push.mjs';
 import { randomUUID } from 'node:crypto';
 
+const TABLE_USERS = process.env.TABLE_USERS;
 const TABLE_POLLS = process.env.TABLE_POLLS;
 const TABLE_RESPONSES = process.env.TABLE_RESPONSES;
 const TABLE_SESSIONS = process.env.TABLE_SESSIONS;
@@ -222,10 +223,20 @@ async function respondToPoll(event) {
     }
   }
 
+  // Look up the user's name to store on the response.
+  // This denormalizes the name so the frontend can display it without
+  // a separate lookup for every respondent.
+  const userResult = await db.get({
+    TableName: TABLE_USERS,
+    Key: { userId: user.sub },
+  });
+  const userName = userResult.Item?.name || user.email;
+
   // Upsert the response (PutItem replaces if the key already exists)
   const response = {
     pollId,
     userId: user.sub,
+    userName,
     respondedAt: new Date().toISOString(),
     ...(poll.mode === 'candidates' && { dates: body.dates }),
     ...(poll.mode === 'open' && { availableDates: body.availableDates }),

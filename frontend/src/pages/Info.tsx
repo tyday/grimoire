@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { subscribeToPush } from '../lib/push.ts';
+import { apiFetch } from '../lib/api.ts';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -27,6 +28,22 @@ async function getSwVersion(): Promise<SwVersion | null> {
     setTimeout(() => resolve(null), 2000);
     reg.active!.postMessage({ type: 'GET_SW_VERSION' }, [channel.port2]);
   });
+}
+
+function TestNotificationButton() {
+  function sendTest() {
+    apiFetch('/admin/test-notification', { method: 'POST' })
+      .then((res) => {
+        if (!res.ok) alert('Failed to send — are you subscribed?');
+      })
+      .catch(() => alert('Failed to reach API'));
+  }
+
+  return (
+    <button className="btn btn-outline btn-full" onClick={sendTest}>
+      Send test notification
+    </button>
+  );
 }
 
 export default function Info() {
@@ -127,16 +144,18 @@ export default function Info() {
           <div className="info-value">{'PushManager' in window ? 'available' : 'not available'}</div>
         </div>
         {'PushManager' in window && (
-          <button
-            className="btn btn-outline btn-full"
-            style={{ marginTop: '12px' }}
-            onClick={async () => {
-              const ok = await subscribeToPush();
-              alert(ok ? 'Subscribed! Try sending a test notification.' : 'Subscribe failed — check console.');
-            }}
-          >
-            Re-subscribe to push
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+            <button
+              className="btn btn-outline btn-full"
+              onClick={async () => {
+                const ok = await subscribeToPush();
+                alert(ok ? 'Subscribed! Try sending a test notification.' : 'Subscribe failed — check console.');
+              }}
+            >
+              Re-subscribe to push
+            </button>
+            <TestNotificationButton />
+          </div>
         )}
       </section>
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { subscribeToPush } from '../lib/push.ts';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -125,6 +126,18 @@ export default function Info() {
           <div className="info-label">PushManager</div>
           <div className="info-value">{'PushManager' in window ? 'available' : 'not available'}</div>
         </div>
+        {'PushManager' in window && (
+          <button
+            className="btn btn-outline btn-full"
+            style={{ marginTop: '12px' }}
+            onClick={async () => {
+              const ok = await subscribeToPush();
+              alert(ok ? 'Subscribed! Try sending a test notification.' : 'Subscribe failed — check console.');
+            }}
+          >
+            Re-subscribe to push
+          </button>
+        )}
       </section>
     </div>
   );

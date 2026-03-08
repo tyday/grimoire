@@ -90,23 +90,36 @@ jobs:
         working-directory: backend
         run: npm run build
 
-      - name: Package
+      - name: Package API Lambda
         working-directory: backend
         run: cd dist && zip -j ../lambda.zip index.mjs
 
-      - name: Get Lambda function name
+      - name: Package Reminder Lambda
+        working-directory: backend
+        run: cd dist && zip -j ../reminder.zip reminder.mjs
+
+      - name: Get Lambda function names
         id: tf
         working-directory: infra
         run: |
           terraform init -backend-config="key=grimoire/prod/terraform.tfstate"
           echo "function_name=$(terraform output -raw lambda_function_name)" >> "$GITHUB_OUTPUT"
+          echo "reminder_function_name=$(terraform output -raw reminder_function_name)" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy to Lambda
+      - name: Deploy API Lambda
         working-directory: backend
         run: |
           aws lambda update-function-code \
             --function-name ${{ steps.tf.outputs.function_name }} \
             --zip-file fileb://lambda.zip \
+            --output text --query 'LastUpdateStatus'
+
+      - name: Deploy Reminder Lambda
+        working-directory: backend
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ steps.tf.outputs.reminder_function_name }} \
+            --zip-file fileb://reminder.zip \
             --output text --query 'LastUpdateStatus'
 
   # ---------------------------------------------------------------------------

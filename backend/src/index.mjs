@@ -14,6 +14,7 @@
 import { authRoutes } from './routes/auth.mjs';
 import { pollRoutes } from './routes/polls.mjs';
 import { pushRoutes } from './routes/push.mjs';
+import { sessionRoutes } from './routes/sessions.mjs';
 
 // Route definitions: each entry is [method, pattern, handler].
 // Patterns can include :params which match any path segment.
@@ -29,6 +30,9 @@ const routeDefinitions = [
 
   // Push notification routes
   ...pushRoutes,
+
+  // Session routes
+  ...sessionRoutes,
 ];
 
 // ---------------------------------------------------------------------------

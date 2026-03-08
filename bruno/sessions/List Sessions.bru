@@ -1,0 +1,22 @@
+meta {
+  name: List Sessions
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/sessions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+script:post-response {
+  const sessions = res.body.sessions;
+  if (sessions && sessions.length > 0) {
+    bru.setVar("sessionId", sessions[0].sessionId);
+  }
+}

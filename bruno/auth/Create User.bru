@@ -1,0 +1,23 @@
+meta {
+  name: Create User
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/admin/create-user
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "email": "newplayer@test.com",
+    "password": "testpass123",
+    "name": "New Player"
+  }
+}

@@ -1,0 +1,29 @@
+meta {
+  name: Create Poll
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/polls
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "mode": "candidates",
+    "title": "Next Session",
+    "candidateDates": ["2026-04-01", "2026-04-05", "2026-04-08"]
+  }
+}
+
+script:post-response {
+  if (res.body.pollId) {
+    bru.setVar("pollId", res.body.pollId);
+  }
+}

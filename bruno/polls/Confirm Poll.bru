@@ -1,0 +1,21 @@
+meta {
+  name: Confirm Poll
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/polls/{{pollId}}/confirm
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "confirmedDate": "2026-04-01"
+  }
+}

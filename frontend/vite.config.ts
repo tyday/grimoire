@@ -1,5 +1,7 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import { execSync } from 'child_process'
+import { readFileSync, writeFileSync } from 'fs'
+import { resolve } from 'path'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -10,6 +12,32 @@ const gitSha = (() => {
 })()
 const buildTime = new Date().toISOString()
 
+// ---------------------------------------------------------------------------
+// Vite plugin: stamp version into sw-push.js after build
+// ---------------------------------------------------------------------------
+// sw-push.js lives in public/ and gets copied to dist/ as-is by Vite.
+// This plugin runs after the build completes and replaces the placeholder
+// version strings with the actual git SHA and build time.
+// ---------------------------------------------------------------------------
+function stampSwVersion(): Plugin {
+  return {
+    name: 'stamp-sw-version',
+    apply: 'build',
+    closeBundle() {
+      const swPath = resolve(__dirname, 'dist', 'sw-push.js')
+      try {
+        let content = readFileSync(swPath, 'utf-8')
+        content = content
+          .replace("const SW_PUSH_VERSION = 'dev'", `const SW_PUSH_VERSION = '${gitSha}'`)
+          .replace("const SW_PUSH_BUILD_TIME = 'dev'", `const SW_PUSH_BUILD_TIME = '${buildTime}'`)
+        writeFileSync(swPath, content)
+      } catch (err) {
+        console.warn('Failed to stamp sw-push.js version:', err)
+      }
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   // Inject build-time constants accessible via import.meta.env
@@ -19,6 +47,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    stampSwVersion(),
 
     // ---------------------------------------------------------------------------
     // VitePWA plugin — turns our React app into a Progressive Web App

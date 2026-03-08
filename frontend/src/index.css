@@ -797,6 +797,26 @@ a.card:hover {
 }
 
 /* --------------------------------------------------------------------------
+   Info page
+   -------------------------------------------------------------------------- */
+.info-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  font-family: var(--font-body);
+}
+.info-label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+.info-value {
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+}
+
+/* --------------------------------------------------------------------------
    Responsive — wider screens
    -------------------------------------------------------------------------- */
 @media (min-width: 768px) {

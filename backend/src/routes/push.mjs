@@ -9,6 +9,7 @@
 
 import { db } from '../lib/db.mjs';
 import { authenticate } from '../lib/auth.mjs';
+import { notifyUser } from '../lib/push.mjs';
 
 const TABLE_PUSH_SUBS = process.env.TABLE_PUSH_SUBS;
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
@@ -102,8 +103,22 @@ async function unsubscribe(event) {
   return { body: { message: 'Unsubscribed' } };
 }
 
+// ============================================================================
+// POST /admin/test-notification — Send a test push to yourself
+// ============================================================================
+async function testNotification(event) {
+  const user = await authenticate(event);
+  if (!user) {
+    return { statusCode: 401, body: { error: 'Authentication required' } };
+  }
+
+  await notifyUser(user.sub, 'Test Notification', 'If you see this, push notifications are working!');
+  return { body: { message: 'Test notification sent' } };
+}
+
 export const pushRoutes = [
   ['GET', '/push/vapid-key', getVapidKey],
   ['POST', '/push/subscribe', subscribe],
   ['DELETE', '/push/subscribe', unsubscribe],
+  ['POST', '/admin/test-notification', testNotification],
 ];

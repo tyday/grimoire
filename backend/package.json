@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "esbuild src/index.mjs src/reminder.mjs --bundle --platform=node --target=node22 --outdir=dist --out-extension:.js=.mjs --format=esm --external:@aws-sdk --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\"",
+    "build": "esbuild src/index.mjs src/reminder.mjs --bundle --platform=node --target=node22 --outdir=dist --out-extension:.js=.mjs --format=esm --external:@aws-sdk --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --define:__BUILD_VERSION__=\"\\\"$(git rev-parse --short HEAD 2>/dev/null || echo unknown)\\\"\" --define:__BUILD_TIME__=\"\\\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\\"\"",
     "test": "node --test src/**/*.test.mjs"
   },
   "dependencies": {

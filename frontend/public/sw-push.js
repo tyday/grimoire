@@ -9,10 +9,32 @@
 // This file is loaded alongside it using importScripts in the PWA config.
 // =============================================================================
 
+// Build version — replaced at build time by the stampSwVersion Vite plugin.
+// If you see 'dev' here, the file hasn't been through the build pipeline.
+const SW_PUSH_VERSION = 'dev';
+const SW_PUSH_BUILD_TIME = 'dev';
+
+// Respond to version queries from the main thread (used by the Info page)
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'GET_SW_VERSION') {
+    event.ports[0]?.postMessage({
+      swPushVersion: SW_PUSH_VERSION,
+      swPushBuildTime: SW_PUSH_BUILD_TIME,
+    });
+  }
+});
+
 // Listen for push events from the server
 self.addEventListener('push', (event) => {
-  // Parse the payload sent from our backend
-  const data = event.data?.json() || {};
+  // Parse the payload sent from our backend.
+  // Wrap in try/catch because Chrome DevTools "Test Push" sends plain text,
+  // not JSON, which would throw on .json().
+  let data = {};
+  try {
+    data = event.data?.json() || {};
+  } catch {
+    data = { body: event.data?.text() || '' };
+  }
 
   const title = data.title || 'Grimoire';
   const options = {

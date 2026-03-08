@@ -8,6 +8,7 @@ import Polls from './pages/Polls.tsx';
 import CreatePoll from './pages/CreatePoll.tsx';
 import PollDetail from './pages/PollDetail.tsx';
 import Sessions from './pages/Sessions.tsx';
+import Info from './pages/Info.tsx';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -34,6 +35,7 @@ function AppRoutes() {
           <Route path="polls/new" element={<CreatePoll />} />
           <Route path="polls/:pollId" element={<PollDetail />} />
           <Route path="sessions" element={<Sessions />} />
+          <Route path="info" element={<Info />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       )}

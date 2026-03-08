@@ -18,6 +18,7 @@ export interface Poll {
 export interface PollResponse {
   pollId: string;
   userId: string;
+  userName?: string;
   respondedAt: string;
   dates?: Record<string, string>;
   availableDates?: string[];

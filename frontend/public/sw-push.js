@@ -11,8 +11,15 @@
 
 // Listen for push events from the server
 self.addEventListener('push', (event) => {
-  // Parse the payload sent from our backend
-  const data = event.data?.json() || {};
+  // Parse the payload sent from our backend.
+  // Wrap in try/catch because Chrome DevTools "Test Push" sends plain text,
+  // not JSON, which would throw on .json().
+  let data = {};
+  try {
+    data = event.data?.json() || {};
+  } catch {
+    data = { body: event.data?.text() || '' };
+  }
 
   const title = data.title || 'Grimoire';
   const options = {

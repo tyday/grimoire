@@ -40,22 +40,27 @@ export default function Dashboard() {
 
     // Check if push notifications are already set up
     async function checkPush() {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        setPushStatus('denied');
-        return;
-      }
-      if ('Notification' in window && Notification.permission === 'denied') {
-        setPushStatus('denied');
-        return;
-      }
-      // If permission is granted, check for an active subscription
-      if ('Notification' in window && Notification.permission === 'granted') {
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
-        setPushStatus(sub ? 'subscribed' : 'show');
-      } else {
-        // Permission not yet asked — show the prompt
-        setPushStatus('show');
+      try {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+          setPushStatus('denied');
+          return;
+        }
+        if (Notification.permission === 'denied') {
+          setPushStatus('denied');
+          return;
+        }
+        // If permission is granted, check for an active subscription
+        if (Notification.permission === 'granted') {
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.getSubscription();
+          setPushStatus(sub ? 'subscribed' : 'show');
+        } else {
+          // Permission not yet asked — show the prompt
+          setPushStatus('show');
+        }
+      } catch (err) {
+        console.error('Push check failed:', err);
+        setPushStatus('show'); // Show button as fallback
       }
     }
     checkPush();

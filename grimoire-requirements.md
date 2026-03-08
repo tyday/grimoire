@@ -2,11 +2,11 @@
 
 ## Overview
 
-Grimoire is a Progressive Web App (PWA) serving as a campaign companion hub for a single, trusted group of developer friends playing Pathfinder. It combines session scheduling, real-time group chat, map sharing, character sheet storage, session notes, and a campaign wiki — all in one private, self-hosted space.
+Grimoire is a Progressive Web App (PWA) serving as a campaign companion hub for a trusted group of developer friends playing Pathfinder 1e. It combines session scheduling, real-time group chat, map sharing, character sheet storage, session notes, and a campaign wiki — all in one private, self-hosted space.
 
 **URL:** `grimoire.habernashing.com`
-**Audience:** One fixed group of ~6 players, all developers
-**System:** Pathfinder (2e assumed, clarify if 1e)
+**Audience:** ~6 players, all developers
+**System:** Pathfinder 1e
 
 ---
 
@@ -14,18 +14,20 @@ Grimoire is a Progressive Web App (PWA) serving as a campaign companion hub for 
 
 Features are delivered in phases. Each phase is independently deployable and usable.
 
-| Phase | Feature |
-|-------|---------|
-| 1 | Scheduling |
-| 2 | Real-time Group Chat |
-| 3 | Session Notes |
-| 4 | Character Sheet Storage |
-| 5 | Map Sharing |
-| 6 | Campaign Wiki / Lore |
+| Phase | Feature | Status |
+|-------|---------|--------|
+| 1 | Scheduling | ✅ Complete |
+| 2 | Runtime Caching & Offline | |
+| 3 | Campaigns | |
+| 4 | Session Notes | |
+| 5 | Character Sheets | |
+| 6 | Real-Time Group Chat | |
+| 7 | Map Sharing | |
+| 8 | Campaign Wiki / Lore | |
 
 ---
 
-## Phase 1: Scheduling (MVP)
+## Phase 1: Scheduling ✅
 
 ### User Flows
 
@@ -52,66 +54,141 @@ Features are delivered in phases. Each phase is independently deployable and usa
 - Compatible with Apple Calendar, Google Calendar, Outlook
 
 **Reminders**
-- Push notification sent 2 days before a confirmed session (configurable)
+- Push notification sent 2 days before a confirmed session
 - Push notification sent day-of
+
+**Extras delivered in Phase 1**
+- Cancel polls (non-destructive status change)
+- Invite links (multi-use, 7-day expiry) for user registration
+- Info page with frontend/backend/SW versioning
+- Test notification button
+- PWA icons (gold spellbook theme)
+- Bruno API test collection
+- `scripts/deploy-dev.sh` for dev deployments
 
 ---
 
-## Phase 2: Real-Time Group Chat
+## Phase 2: Runtime Caching & Offline
 
-- Single group chat channel (one campaign, one room)
+Add workbox runtime caching so previously-viewed data is available offline (read-only).
+
+### Features
+- **Offline indicator** — visible banner/badge when the device is offline
+- **API response caching** — workbox strategies for GET endpoints:
+  - Stale-while-revalidate for polls, sessions, dashboard data
+  - Cache-first for static-ish data (user profiles, campaign metadata)
+  - Network-only for mutations (POST/PUT/DELETE)
+- **Offline-friendly UI** — disable action buttons when offline, show cached data gracefully
+- **Cache versioning** — clear stale caches on SW update
+
+### Build Order
+1. Offline indicator component (online/offline event listeners)
+2. Workbox runtime caching strategies in vite config
+3. Disable mutation buttons when offline
+4. Test offline behavior across pages
+
+---
+
+## Phase 3: Campaigns
+
+Introduce multi-campaign support. Players can belong to multiple campaigns. Sessions, polls, notes, characters, and maps are scoped to a campaign.
+
+### Data Model
+- **Campaigns table** — `campaignId` (PK), name, description, createdAt
+- **Campaign members table** — `campaignId` (PK), `userId` (SK), role (`gm` | `player`), joinedAt
+- Existing tables (polls, sessions, responses) gain a `campaignId` attribute
+- GSI on campaignId for querying campaign-scoped data
+
+### User Flows
+- **Create a campaign** — any user can create a campaign (they become GM)
+- **Campaign switcher** — top-level UI to switch active campaign
+- **Campaign membership** — roles stored (gm/player) but not enforced yet (any member can create polls, confirm sessions). Roles reserved for future use (e.g., GM-only map editing).
+- **Invite links** — remain app-wide (user joins the app, then gets added to campaigns)
+
+### Retrofit
+- Add `campaignId` to polls, sessions, responses
+- Migrate existing data (backfill with a default campaign)
+- All Phase 1 UI becomes campaign-scoped (poll list shows current campaign's polls, etc.)
+
+### Build Order
+1. Campaigns DynamoDB table + members table + Terraform
+2. Campaign CRUD endpoints (create, list, get, add member)
+3. Add campaignId to poll/session creation and queries
+4. Data migration script for existing dev/prod data
+5. Frontend: campaign switcher UI + scoped views
+6. Frontend: create/manage campaign page
+
+---
+
+## Phase 4: Session Notes
+
+- Any member can create/edit notes for a session (campaign-scoped)
+- Notes are associated with a confirmed session
+- **Markdown editing** with preview
+- Notes are readable by all campaign members
+- Push notification when new notes are posted
+- Cached offline via Phase 2 runtime caching
+
+---
+
+## Phase 5: Character Sheets
+
+Pathfinder 1e structured character sheets, campaign-scoped.
+
+### MVP Fields
+- **Basic info:** name, race, class, level, alignment, deity
+- **Ability scores:** STR, DEX, CON, INT, WIS, CHA (base + modifiers)
+- **Combat stats:** HP (current/max), AC, initiative, BAB, CMB/CMD
+- **Saving throws:** Fort, Ref, Will (base + ability + misc)
+- **Freeform notes:** markdown field for feats, spells, inventory, background, and anything else
+
+### Later Iterations
+- Structured skills list with ranks and modifiers
+- Structured feats and class features
+- Spell slots and spell lists
+- Inventory with weight tracking
+- Sheet versioning (previous versions accessible)
+
+### Other
+- Each player owns their sheet(s) — one per character per campaign
+- GM can view all sheets in the campaign
+- PDF/image upload as supplement
+- Cached offline via Phase 2 runtime caching
+
+---
+
+## Phase 6: Real-Time Group Chat
+
+- One chat channel per campaign
 - Real-time messaging via WebSockets (AWS API Gateway WebSocket API)
 - Message history persisted in DynamoDB
 - Push notification for new messages when app is backgrounded
-- Basic formatting support (bold, italic, code blocks) — Markdown subset
+- Basic formatting support (Markdown subset)
 - Image/file attachment support (uploaded to S3)
 
 ---
 
-## Phase 3: Session Notes
+## Phase 7: Map Sharing
 
-- Any member can create notes for a session
-- Notes are associated with a confirmed session date
-- Rich text editing (simple WYSIWYG or Markdown)
-- Notes are readable by all group members
-- Push notification when new notes are posted
-
----
-
-## Phase 4: Character Sheet Storage
-
-- Pathfinder-specific structured character sheets (form-based)
-- PDF/image upload option as an alternative or supplement
-- Each player owns their own sheet
-- GM can view all sheets
-- Sheets are versioned — previous versions accessible
-- Core Pathfinder fields:
-  - Ability scores, AC, HP, saves
-  - Skills, feats, spells
-  - Inventory / equipment
-  - Character background / bio
-
----
-
-## Phase 5: Map Sharing
-
-- Upload image files as maps (JPG, PNG, WebP)
+- Upload image files as maps (JPG, PNG, WebP) — stored in S3, served via CloudFront
 - Interactive layer: add named pins/markers to maps
 - Pin types: location, NPC, point of interest, hazard
 - GM can add/edit/delete pins; players can view
-- Multiple maps supported (world map, regional, dungeon level, etc.)
-- Maps associated with campaign, not individual sessions
+- Multiple maps per campaign (world map, regional, dungeon level, etc.)
+- Campaign-scoped
+- Cached offline (cache-first via SW for map images)
 
 ---
 
-## Phase 6: Campaign Wiki / Lore
+## Phase 8: Campaign Wiki / Lore
 
 - Simple wiki for campaign lore, NPCs, locations, factions
-- Any member can create and edit entries
+- Any campaign member can create and edit entries
 - Basic categorization (NPCs, Locations, Factions, History, Items)
 - Internal linking between entries
 - Search across all entries
 - Edit history per entry
+- Campaign-scoped
 
 ---
 
@@ -119,56 +196,66 @@ Features are delivered in phases. Each phase is independently deployable and usa
 
 - Simple email + password accounts
 - Passwords stored as bcrypt hashes (never plaintext)
-- JWT handling via the `jose` library (no hand-rolled token creation/validation)
+- JWT handling via the `jose` library
 - Token strategy: short-lived access tokens (15 min) + long-lived refresh tokens (30 days) stored in DynamoDB
   - Access token: sent in `Authorization` header, stateless validation
-  - Refresh token: httpOnly cookie, stored hashed in DB so they can be revoked
-- Password reset via email link (AWS SES)
-- No self-registration — accounts created by admin (closed group)
+  - Refresh token: httpOnly cookie, stored hashed in DB, revocable
+- Invite links for registration (multi-use, 7-day expiry, app-wide)
+- Password reset via email link (AWS SES) — future
 
 ---
 
 ## Technical Stack
 
 ### Frontend
-- **Framework:** React (Vite)
-- **Type:** Progressive Web App (PWA)
-  - Service worker for offline support and push notification handling
+- **Framework:** React + TypeScript (Vite)
+- **Type:** Progressive Web App (PWA) via vite-plugin-pwa
+  - Service worker for offline support, caching, and push notifications
   - Web App Manifest for home screen installation
-  - Push notifications require iOS 16.4+ with app added to home screen
 - **Hosting:** AWS S3 + CloudFront
-- **Domain:** `grimoire.habernashing.com` via Route 53 (existing domain)
+- **Domain:** `grimoire.habernashing.com` via Route 53
 - **HTTPS:** ACM certificate
 
 ### Backend
-- **Compute:** AWS Lambda (Node.js)
-- **API:** AWS API Gateway (REST/HTTP API for standard endpoints; WebSocket API for real-time chat)
-- **Auth:** Custom JWT-based auth (bcrypt for password hashing)
-- **Email:** AWS SES (password reset, transactional notifications)
-- **Push Notifications:** `web-push` npm library (VAPID) called directly from Lambda, subscriptions stored in DynamoDB
+- **Compute:** AWS Lambda (Node.js 22, ESM, bundled with esbuild)
+- **API:** AWS API Gateway HTTP API (WebSocket API added in Phase 6)
+- **Auth:** Custom JWT-based auth (bcrypt via bcryptjs)
+- **Push Notifications:** `web-push` library (VAPID), subscriptions in DynamoDB
 - **File Storage:** AWS S3 (map images, character sheet PDFs, chat attachments)
 - **Database:** AWS DynamoDB
 
 ### Infrastructure
-- **IaC:** Terraform
-- All resources defined as code — no manual console configuration
-- Environments: `dev` and `prod`
-- Subdomain routing via existing Route 53 hosted zone
+- **IaC:** Terraform with S3 backend
+- All resources defined as code
+- Environments: `dev` and `prod` (separate state files)
+- CI/CD: GitHub Actions (deploy on merge to main, plan on PR)
 
 ---
 
-## DynamoDB Data Model (Phase 1 starting point)
+## DynamoDB Data Model
 
-| Table | Partition Key | Sort Key | Notes |
-|-------|--------------|----------|-------|
-| `users` | `userId` | — | email, passwordHash |
-| `push_subscriptions` | `userId` | `endpoint` | Web Push subscription data (VAPID) |
-| `refresh_tokens` | `userId` | `tokenHash` | expiresAt, createdAt (for revocation) |
-| `polls` | `pollId` | — | creatorId, mode, status, candidateDates |
-| `responses` | `pollId` | `userId` | availability data per user per poll |
-| `sessions` | `sessionId` | — | confirmedDate, pollId |
+### Phase 1 (deployed)
 
-*Additional tables will be added per phase.*
+| Table | PK | SK | GSIs | Notes |
+|-------|----|----|------|-------|
+| `users` | `userId` | — | `email-index` | email, passwordHash, name |
+| `refresh_tokens` | `userId` | `tokenHash` | — | TTL on expiresAt |
+| `push_subscriptions` | `userId` | `endpoint` | — | Web Push subscription data |
+| `polls` | `pollId` | — | `status-index` | creatorId, mode, status, candidateDates |
+| `responses` | `pollId` | `userId` | — | dates or availableDates, userName |
+| `sessions` | `sessionId` | — | `date-index` (type + confirmedDate) | pollId, title |
+| `invites` | `token` | — | — | TTL on expiresAt, multi-use |
+
+### Phase 3 (campaigns)
+
+| Table | PK | SK | GSIs | Notes |
+|-------|----|----|------|-------|
+| `campaigns` | `campaignId` | — | — | name, description, createdAt |
+| `campaign_members` | `campaignId` | `userId` | `user-campaigns-index` (userId) | role (gm/player), joinedAt |
+
+Existing tables gain `campaignId` attribute + GSIs as needed.
+
+*Additional tables added per phase.*
 
 ---
 
@@ -183,27 +270,22 @@ Features are delivered in phases. Each phase is independently deployable and usa
 | API Gateway (HTTP) | 1 | REST API routing |
 | Lambda | 1 | Backend business logic |
 | DynamoDB | 1 | Data storage |
-| SES | 1 | Transactional email |
-| — | 1 | Web Push via `web-push` library (no SNS needed) |
-| API Gateway (WebSocket) | 2 | Real-time chat connections |
-| S3 (media bucket) | 2 | Chat attachments, map images |
-| EventBridge | 1 | Scheduled reminder Lambdas |
+| EventBridge | 1 | Scheduled reminder Lambda |
+| S3 (media bucket) | 5+ | Map images, character PDFs, chat attachments |
+| API Gateway (WebSocket) | 6 | Real-time chat connections |
+| SES | Future | Password reset emails |
 
 ---
 
 ## CI/CD
 
 - **Platform:** GitHub Actions
-- **Frontend pipeline:**
-  - On push to `main`: build React app, sync to S3, invalidate CloudFront cache
-  - On PR: build + lint + test (no deploy)
-- **Backend pipeline:**
-  - On push to `main`: package Lambda functions, deploy via Terraform
-  - On PR: lint + test + `terraform plan` (posted as PR comment)
-- **Infrastructure pipeline:**
-  - Terraform changes applied automatically on merge to `main` (prod)
-  - `dev` environment deployed from feature branches on demand
-- **Secrets:** AWS credentials stored as GitHub Actions secrets (OIDC preferred if feasible)
+- **Frontend:** On push to `main`: build → S3 sync → CloudFront invalidation. On PR: build + typecheck.
+- **Backend:** On push to `main`: esbuild bundle → zip → Lambda deploy. On PR: build check.
+- **Infrastructure:** Terraform apply on merge to `main` (prod). Plan on PR (dev state).
+- **Dev deploys:** `scripts/deploy-dev.sh [backend|frontend|infra|all]`
+- **Secrets:** AWS credentials as GitHub Actions secrets
+- **Versioning:** Git SHA + build timestamp injected at build time (esbuild --define for backend, Vite define for frontend)
 
 ---
 
@@ -213,30 +295,14 @@ Features are delivered in phases. Each phase is independently deployable and usa
 - No third-party analytics or tracking
 - Passwords never stored in plaintext
 - Push notification subscriptions stored per user, deletable
-- No self-registration — closed group only
+- Offline read access for previously-viewed data (Phase 2+)
 
 ---
 
 ## Out of Scope
 
-- Multiple campaigns / multi-tenancy
 - OAuth / social login
 - Native mobile app
 - Dice roller
 - Real-time collaborative map editing (GM controls pins)
 - Video/voice chat
-
----
-
-## Suggested Phase 1 Build Order
-
-1. Terraform: Route 53 subdomain + ACM certificate + S3 + CloudFront
-2. React PWA scaffold with service worker and manifest
-3. GitHub Actions CI/CD pipelines (frontend deploy + `terraform plan/apply`)
-4. Terraform: DynamoDB tables + Lambda + API Gateway
-5. Health-check endpoint to validate full deployment pipeline
-6. Auth flows (admin account creation, login/refresh, password reset via SES)
-7. Poll creation and response flows
-8. Push notification setup via `web-push` (VAPID)
-9. Session confirmation + `.ics` export
-10. Reminder notifications (scheduled Lambda via EventBridge)

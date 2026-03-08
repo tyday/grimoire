@@ -22,7 +22,7 @@ export default function Dashboard() {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pushStatus, setPushStatus] = useState<'idle' | 'subscribed' | 'denied'>('idle');
+  const [pushStatus, setPushStatus] = useState<'unknown' | 'show' | 'subscribed' | 'denied'>('unknown');
 
   useEffect(() => {
     async function load() {
@@ -37,6 +37,28 @@ export default function Dashboard() {
       }
     }
     load();
+
+    // Check if push notifications are already set up
+    async function checkPush() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        setPushStatus('denied');
+        return;
+      }
+      if ('Notification' in window && Notification.permission === 'denied') {
+        setPushStatus('denied');
+        return;
+      }
+      // If permission is granted, check for an active subscription
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        setPushStatus(sub ? 'subscribed' : 'show');
+      } else {
+        // Permission not yet asked — show the prompt
+        setPushStatus('show');
+      }
+    }
+    checkPush();
   }, []);
 
   const [inviteLink, setInviteLink] = useState('');
@@ -74,8 +96,8 @@ export default function Dashboard() {
         <h2>Welcome, {user?.name}</h2>
       </div>
 
-      {/* Notification prompt */}
-      {pushStatus === 'idle' && 'Notification' in window && Notification.permission === 'default' && (
+      {/* Notification prompt — shown if no active push subscription */}
+      {pushStatus === 'show' && (
         <button className="btn btn-outline btn-full notification-prompt" onClick={handleEnableNotifications}>
           Enable push notifications
         </button>

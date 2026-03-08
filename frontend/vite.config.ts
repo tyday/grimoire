@@ -28,10 +28,19 @@ export default defineConfig({
       // at install time, so the app works offline immediately.
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Exclude sw-push.js from precache — it's loaded via importScripts
+        // and must always be fetched fresh from the network. If it's precached,
+        // service worker updates won't pick up changes to the push handler.
+        globIgnores: ['sw-push.js'],
         // Import our push notification handler into the generated service worker.
         // importScripts runs at the top of sw.js, making our push event
         // listeners available alongside workbox's caching logic.
         importScripts: ['sw-push.js'],
+        // Force the new service worker to activate immediately instead of
+        // waiting for all tabs to close. For ~6 users, we always want the
+        // latest code running.
+        skipWaiting: true,
+        clientsClaim: true,
       },
 
       // The manifest tells the browser how to display the app when installed

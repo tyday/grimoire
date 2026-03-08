@@ -5,7 +5,7 @@
 // Bottom nav is thumb-friendly for mobile PWA use.
 // =============================================================================
 
-import { Outlet, NavLink } from 'react-router';
+import { Outlet, NavLink, Link } from 'react-router';
 import { useAuth } from '../lib/auth.tsx';
 
 export default function Layout() {
@@ -14,7 +14,7 @@ export default function Layout() {
   return (
     <div className="layout">
       <header className="topbar">
-        <div className="topbar-brand">Grimoire</div>
+        <Link to="/info" className="topbar-brand">Grimoire</Link>
         <div className="topbar-user">
           <span className="topbar-name">{user?.name}</span>
           <button className="btn-ghost btn-sm" onClick={logout}>

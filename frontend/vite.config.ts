@@ -1,9 +1,22 @@
 import { defineConfig } from 'vite'
+import { execSync } from 'child_process'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Grab git SHA and build time at build time
+const gitSha = (() => {
+  try { return execSync('git rev-parse --short HEAD').toString().trim() }
+  catch { return 'unknown' }
+})()
+const buildTime = new Date().toISOString()
+
 // https://vite.dev/config/
 export default defineConfig({
+  // Inject build-time constants accessible via import.meta.env
+  define: {
+    __BUILD_VERSION__: JSON.stringify(gitSha),
+    __BUILD_TIME__: JSON.stringify(buildTime),
+  },
   plugins: [
     react(),
 

@@ -1,0 +1,25 @@
+meta {
+  name: Respond to Poll
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/polls/{{pollId}}/respond
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "dates": {
+      "2026-04-01": "yes",
+      "2026-04-05": "maybe",
+      "2026-04-08": "no"
+    }
+  }
+}

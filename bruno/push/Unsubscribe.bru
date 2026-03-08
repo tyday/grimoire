@@ -1,0 +1,21 @@
+meta {
+  name: Unsubscribe
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/push/subscribe
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "endpoint": "https://fake-push-service.example.com/push/test-device-1"
+  }
+}

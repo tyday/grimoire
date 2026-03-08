@@ -38,3 +38,8 @@ output "lambda_function_name" {
   description = "Lambda function name — used by CI/CD to deploy new code"
   value       = aws_lambda_function.api.function_name
 }
+
+output "reminder_function_name" {
+  description = "Reminder Lambda function name — used by CI/CD to deploy new code"
+  value       = aws_lambda_function.reminder.function_name
+}

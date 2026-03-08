@@ -1,0 +1,15 @@
+meta {
+  name: Download ICS
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/sessions/{{sessionId}}/ics
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

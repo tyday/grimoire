@@ -5,14 +5,14 @@
 // and sending the subscription to our backend.
 //
 // Flow:
-//   1. Call subscribeToPush(accessToken)
+//   1. Call subscribeToPush()
 //   2. We fetch the VAPID public key from the API
 //   3. Ask the browser for notification permission
 //   4. If granted, subscribe via the service worker's pushManager
 //   5. Send the subscription object to our backend for storage
 // =============================================================================
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+import { apiFetch } from './api.ts';
 
 // Convert a base64url string to a Uint8Array (required by pushManager.subscribe)
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -26,7 +26,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-export async function subscribeToPush(accessToken: string): Promise<boolean> {
+export async function subscribeToPush(): Promise<boolean> {
   try {
     // Check if push is supported
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -42,7 +42,7 @@ export async function subscribeToPush(accessToken: string): Promise<boolean> {
     }
 
     // Get the VAPID public key from our API
-    const keyResponse = await fetch(`${API_URL}/push/vapid-key`);
+    const keyResponse = await apiFetch('/push/vapid-key');
     const { publicKey } = await keyResponse.json();
     if (!publicKey) {
       console.warn('No VAPID public key configured');
@@ -58,13 +58,9 @@ export async function subscribeToPush(accessToken: string): Promise<boolean> {
       applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
     });
 
-    // Send the subscription to our backend
-    const response = await fetch(`${API_URL}/push/subscribe`, {
+    // Send the subscription to our backend (uses apiFetch for auth + auto-refresh)
+    const response = await apiFetch('/push/subscribe', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
       body: JSON.stringify(subscription.toJSON()),
     });
 

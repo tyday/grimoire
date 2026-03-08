@@ -45,7 +45,7 @@ export default function Dashboard() {
   const upcomingSessions = sessions.filter((s) => daysUntil(s.confirmedDate) >= 0);
 
   async function handleEnableNotifications() {
-    const success = await subscribeToPush('');
+    const success = await subscribeToPush();
     setPushStatus(success ? 'subscribed' : 'denied');
   }
 

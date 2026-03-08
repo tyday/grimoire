@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../lib/auth.tsx';
-import { getPolls, getSessions } from '../lib/api.ts';
+import { getPolls, getSessions, createInvite } from '../lib/api.ts';
 import { subscribeToPush } from '../lib/push.ts';
 import type { Poll, Session } from '../lib/types.ts';
 
@@ -39,12 +39,29 @@ export default function Dashboard() {
     load();
   }, []);
 
+  const [inviteLink, setInviteLink] = useState('');
+
   const activePolls = polls.filter((p) => p.status === 'active');
   const upcomingSessions = sessions.filter((s) => daysUntil(s.confirmedDate) >= 0);
 
   async function handleEnableNotifications() {
     const success = await subscribeToPush('');
     setPushStatus(success ? 'subscribed' : 'denied');
+  }
+
+  async function handleInvite() {
+    try {
+      const { token } = await createInvite();
+      setInviteLink(`${window.location.origin}/join/${token}`);
+    } catch (err) {
+      console.error('Failed to create invite:', err);
+    }
+  }
+
+  function handleCopyInvite() {
+    // This runs directly from a click handler (no preceding await),
+    // so clipboard access works on iOS Safari.
+    navigator.clipboard.writeText(inviteLink).catch(() => {});
   }
 
   if (loading) {
@@ -62,6 +79,18 @@ export default function Dashboard() {
         <button className="btn btn-outline btn-full notification-prompt" onClick={handleEnableNotifications}>
           Enable push notifications
         </button>
+      )}
+
+      {/* Invite */}
+      {!inviteLink ? (
+        <button className="btn btn-outline btn-full" onClick={handleInvite}>
+          Invite a player
+        </button>
+      ) : (
+        <div className="invite-link-box" onClick={handleCopyInvite}>
+          <span className="invite-link-label">Tap to copy invite link</span>
+          <span className="invite-link-url">{inviteLink}</span>
+        </div>
       )}
 
       {/* Upcoming Sessions */}

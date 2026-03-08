@@ -177,6 +177,35 @@ resource "aws_dynamodb_table" "responses" {
 # GSI on confirmedDate lets us query "upcoming sessions" efficiently by
 # sorting on the date.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Invites table
+# ---------------------------------------------------------------------------
+# Stores one-time invite tokens for user registration. Any authenticated
+# user can generate an invite link. The link contains a token that allows
+# a new user to register without needing admin access.
+#
+# PK: token — a random UUID that appears in the invite URL.
+# TTL on expiresAt auto-deletes expired invites after 7 days.
+# ---------------------------------------------------------------------------
+resource "aws_dynamodb_table" "invites" {
+  name         = "grimoire-invites-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "token"
+
+  attribute {
+    name = "token"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "expiresAt"
+    enabled        = true
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Sessions table
+# ---------------------------------------------------------------------------
 resource "aws_dynamodb_table" "sessions" {
   name         = "grimoire-sessions-${var.environment}"
   billing_mode = "PAY_PER_REQUEST"

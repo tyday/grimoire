@@ -19,6 +19,7 @@ import { docClient } from '../lib/db.mjs';
 
 const TABLE_USERS = process.env.TABLE_USERS;
 const TABLE_REFRESH_TOKENS = process.env.TABLE_REFRESH_TOKENS;
+const TABLE_INVITES = process.env.TABLE_INVITES;
 
 // Helper to parse JSON body from API Gateway event
 function parseBody(event) {
@@ -284,10 +285,128 @@ async function createUser(event) {
   };
 }
 
+// ============================================================================
+// POST /admin/invite — Generate an invite link
+// ============================================================================
+// Any authenticated user can create an invite. The invite is a random token
+// stored in DynamoDB with a 7-day TTL. The frontend constructs the full URL
+// and lets the user copy it to share.
+//
+// Returns: { token, expiresAt }
+// ============================================================================
+async function createInvite(event) {
+  const caller = await authenticate(event);
+  if (!caller) {
+    return { statusCode: 401, body: { error: 'Authentication required' } };
+  }
+
+  const token = randomUUID();
+  const expiresAt = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60; // 7 days, unix seconds for DynamoDB TTL
+
+  await db.put({
+    TableName: TABLE_INVITES,
+    Item: {
+      token,
+      createdBy: caller.sub,
+      expiresAt,
+      createdAt: new Date().toISOString(),
+    },
+  });
+
+  return {
+    statusCode: 201,
+    body: { token, expiresAt },
+  };
+}
+
+// ============================================================================
+// POST /auth/register — Register with an invite token
+// ============================================================================
+// Public endpoint — no auth required. The invite token acts as authorization.
+// The token is single-use: it's deleted after a successful registration.
+//
+// Body: { token, email, password, name }
+// ============================================================================
+async function register(event) {
+  const { token, email, password, name } = parseBody(event);
+
+  if (!token || !email || !password || !name) {
+    return { statusCode: 400, body: { error: 'Token, email, password, and name are required' } };
+  }
+
+  // Validate the invite token
+  const inviteResult = await db.get({
+    TableName: TABLE_INVITES,
+    Key: { token },
+  });
+
+  if (!inviteResult.Item) {
+    return { statusCode: 400, body: { error: 'Invalid or expired invite link' } };
+  }
+
+  // Check expiry (TTL deletion is eventually consistent, so check manually too)
+  if (inviteResult.Item.expiresAt < Math.floor(Date.now() / 1000)) {
+    return { statusCode: 400, body: { error: 'Invite link has expired' } };
+  }
+
+  // Check if email already exists
+  const existing = await db.query({
+    TableName: TABLE_USERS,
+    IndexName: 'email-index',
+    KeyConditionExpression: 'email = :email',
+    ExpressionAttributeValues: { ':email': email },
+  });
+
+  if (existing.Items?.length > 0) {
+    return { statusCode: 409, body: { error: 'Email already registered' } };
+  }
+
+  // Create the user
+  const userId = randomUUID();
+  const passwordHash = await hashPassword(password);
+
+  await db.put({
+    TableName: TABLE_USERS,
+    Item: {
+      userId,
+      email,
+      name,
+      passwordHash,
+      createdAt: new Date().toISOString(),
+    },
+  });
+
+  // Log the new user in immediately — return access token + refresh cookie
+  const accessToken = await createAccessToken(userId, email);
+  const refreshToken = generateRefreshToken();
+  const tokenHash = hashToken(refreshToken);
+
+  await db.put({
+    TableName: TABLE_REFRESH_TOKENS,
+    Item: {
+      userId,
+      tokenHash,
+      expiresAt: refreshTokenExpiresAt(),
+      createdAt: new Date().toISOString(),
+    },
+  });
+
+  return {
+    statusCode: 201,
+    body: {
+      accessToken,
+      user: { userId, email, name },
+    },
+    cookies: [refreshTokenCookie(`${userId}:${refreshToken}`, 30 * 24 * 60 * 60)],
+  };
+}
+
 // Export route definitions as [method, path, handler] tuples
 export const authRoutes = [
   ['POST', '/auth/login', login],
   ['POST', '/auth/refresh', refresh],
   ['POST', '/auth/logout', logout],
+  ['POST', '/auth/register', register],
   ['POST', '/admin/create-user', createUser],
+  ['POST', '/admin/invite', createInvite],
 ];

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { AuthProvider, useAuth } from './lib/auth.tsx';
 import Layout from './components/Layout.tsx';
 import Login from './pages/Login.tsx';
+import Register from './pages/Register.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import Polls from './pages/Polls.tsx';
 import CreatePoll from './pages/CreatePoll.tsx';
@@ -19,18 +20,23 @@ function AppRoutes() {
     );
   }
 
-  if (!user) return <Login />;
-
+  // The /join/:token route is accessible without auth — it's the registration page
+  // for invited users. All other routes require authentication.
   return (
     <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="polls" element={<Polls />} />
-        <Route path="polls/new" element={<CreatePoll />} />
-        <Route path="polls/:pollId" element={<PollDetail />} />
-        <Route path="sessions" element={<Sessions />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
+      <Route path="join/:token" element={user ? <Navigate to="/" replace /> : <Register />} />
+      {!user ? (
+        <Route path="*" element={<Login />} />
+      ) : (
+        <Route element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="polls" element={<Polls />} />
+          <Route path="polls/new" element={<CreatePoll />} />
+          <Route path="polls/:pollId" element={<PollDetail />} />
+          <Route path="sessions" element={<Sessions />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      )}
     </Routes>
   );
 }

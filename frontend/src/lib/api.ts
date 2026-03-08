@@ -85,9 +85,34 @@ export async function tryRefresh(): Promise<boolean> {
   }
 }
 
+export async function register(
+  token: string,
+  email: string,
+  password: string,
+  name: string,
+): Promise<{ accessToken: string; user: User }> {
+  const res = await apiFetch('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ token, email, password, name }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Registration failed');
+  }
+  const data = await res.json();
+  accessToken = data.accessToken;
+  return data;
+}
+
 export async function logout(): Promise<void> {
   await apiFetch('/auth/logout', { method: 'POST' });
   accessToken = null;
+}
+
+export async function createInvite(): Promise<{ token: string; expiresAt: number }> {
+  const res = await apiFetch('/admin/invite', { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to create invite');
+  return res.json();
 }
 
 // ---------------------------------------------------------------------------

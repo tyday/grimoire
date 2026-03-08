@@ -64,6 +64,14 @@ export const handler = async (event) => {
   const method = event.requestContext.http.method;
   const path = event.requestContext.http.path;
 
+  // OPTIONS requests are CORS preflight checks sent by browsers before
+  // cross-origin requests. API Gateway handles the CORS headers automatically,
+  // but the request still reaches Lambda via the $default catch-all route.
+  // We return 200 so the browser sees a successful preflight.
+  if (method === 'OPTIONS') {
+    return { statusCode: 200, body: '' };
+  }
+
   // Find the first matching route
   let matchedHandler = null;
   let params = {};

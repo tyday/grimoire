@@ -318,6 +318,51 @@ async function confirmPoll(event) {
   };
 }
 
+// ============================================================================
+// POST /polls/:pollId/cancel — Cancel an active poll (creator only)
+// ============================================================================
+// Sets the poll status to "cancelled". The poll stops appearing in the
+// active/confirmed list queries but the data is preserved.
+// ============================================================================
+async function cancelPoll(event) {
+  const { user, error } = await requireAuth(event);
+  if (error) return error;
+
+  const { pollId } = event.pathParams;
+
+  const pollResult = await db.get({
+    TableName: TABLE_POLLS,
+    Key: { pollId },
+  });
+
+  if (!pollResult.Item) {
+    return { statusCode: 404, body: { error: 'Poll not found' } };
+  }
+
+  const poll = pollResult.Item;
+
+  if (poll.creatorId !== user.sub) {
+    return { statusCode: 403, body: { error: 'Only the poll creator can cancel it' } };
+  }
+
+  if (poll.status !== 'active') {
+    return { statusCode: 400, body: { error: 'Only active polls can be cancelled' } };
+  }
+
+  await db.update({
+    TableName: TABLE_POLLS,
+    Key: { pollId },
+    UpdateExpression: 'SET #status = :status, cancelledAt = :now',
+    ExpressionAttributeNames: { '#status': 'status' },
+    ExpressionAttributeValues: {
+      ':status': 'cancelled',
+      ':now': new Date().toISOString(),
+    },
+  });
+
+  return { body: { message: 'Poll cancelled' } };
+}
+
 // Export route definitions as [method, path, handler] tuples
 export const pollRoutes = [
   ['POST', '/polls', createPoll],
@@ -325,4 +370,5 @@ export const pollRoutes = [
   ['GET', '/polls/:pollId', getPoll],
   ['POST', '/polls/:pollId/respond', respondToPoll],
   ['POST', '/polls/:pollId/confirm', confirmPoll],
+  ['POST', '/polls/:pollId/cancel', cancelPoll],
 ];

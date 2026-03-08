@@ -147,14 +147,6 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v3
 
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Build
-        working-directory: frontend
-        run: npm run build
-
       - name: Get Terraform Outputs
         id: tf
         working-directory: infra
@@ -162,6 +154,17 @@ jobs:
           terraform init -backend-config="key=grimoire/prod/terraform.tfstate"
           echo "bucket=$(terraform output -raw frontend_bucket_name)" >> "$GITHUB_OUTPUT"
           echo "distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_OUTPUT"
+          echo "api_url=$(terraform output -raw api_url)" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ steps.tf.outputs.api_url }}
 
       - name: Sync to S3
         working-directory: frontend

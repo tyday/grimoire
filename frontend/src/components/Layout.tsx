@@ -8,10 +8,12 @@
 import { Outlet, NavLink, Link } from 'react-router';
 import { useAuth } from '../lib/auth.tsx';
 import { useOnline } from '../lib/useOnline.ts';
+import { useCampaign } from '../lib/campaign.tsx';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const online = useOnline();
+  const { campaigns, activeCampaign, setActiveCampaign } = useCampaign();
 
   return (
     <div className="layout">
@@ -29,6 +31,31 @@ export default function Layout() {
           </button>
         </div>
       </header>
+
+      {/* Campaign switcher — shown below topbar when user belongs to campaigns */}
+      {campaigns.length > 0 && (
+        <div className="campaign-bar">
+          {campaigns.length === 1 ? (
+            <Link to={`/campaigns/${activeCampaign?.campaignId}`} className="campaign-bar-name">
+              {activeCampaign?.name}
+            </Link>
+          ) : (
+            <select
+              className="campaign-select"
+              value={activeCampaign?.campaignId || ''}
+              onChange={(e) => {
+                const c = campaigns.find((c) => c.campaignId === e.target.value);
+                if (c) setActiveCampaign(c);
+              }}
+            >
+              {campaigns.map((c) => (
+                <option key={c.campaignId} value={c.campaignId}>{c.name}</option>
+              ))}
+            </select>
+          )}
+          <Link to="/campaigns" className="btn-ghost btn-sm campaign-bar-manage">Manage</Link>
+        </div>
+      )}
 
       <main className="page">
         <Outlet />

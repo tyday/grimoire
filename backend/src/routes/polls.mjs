@@ -62,7 +62,7 @@ async function createPoll(event) {
   const { user, error } = await requireAuth(event);
   if (error) return error;
 
-  const { mode, title, candidateDates } = parseBody(event);
+  const { mode, title, candidateDates, campaignId } = parseBody(event);
 
   if (!mode || !title) {
     return { statusCode: 400, body: { error: 'Mode and title are required' } };
@@ -89,6 +89,7 @@ async function createPoll(event) {
     creatorId: user.sub,
     createdAt: now,
     ...(mode === 'candidates' && { candidateDates }),
+    ...(campaignId && { campaignId }),
   };
 
   await db.put({
@@ -116,27 +117,47 @@ async function listPolls(event) {
   const { user, error } = await requireAuth(event);
   if (error) return error;
 
-  // Query active polls first, then confirmed
-  const [activeResult, confirmedResult] = await Promise.all([
-    db.query({
-      TableName: TABLE_POLLS,
-      IndexName: 'status-index',
-      KeyConditionExpression: '#status = :status',
-      ExpressionAttributeNames: { '#status': 'status' }, // 'status' is a DynamoDB reserved word
-      ExpressionAttributeValues: { ':status': 'active' },
-    }),
-    db.query({
-      TableName: TABLE_POLLS,
-      IndexName: 'status-index',
-      KeyConditionExpression: '#status = :status',
-      ExpressionAttributeNames: { '#status': 'status' },
-      ExpressionAttributeValues: { ':status': 'confirmed' },
-    }),
-  ]);
+  // Check for campaignId query parameter
+  const campaignId = event.queryStringParameters?.campaignId;
 
-  // Combine and sort by creation date (newest first)
-  const polls = [...(activeResult.Items || []), ...(confirmedResult.Items || [])]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  let polls;
+
+  if (campaignId) {
+    // Use the campaign-index GSI to get polls for a specific campaign.
+    // The GSI has campaignId as PK and status as SK, so we get all polls
+    // for the campaign in one query.
+    const result = await db.query({
+      TableName: TABLE_POLLS,
+      IndexName: 'campaign-index',
+      KeyConditionExpression: 'campaignId = :cid',
+      ExpressionAttributeValues: { ':cid': campaignId },
+    });
+    // Filter out cancelled polls and sort newest first
+    polls = (result.Items || [])
+      .filter((p) => p.status !== 'cancelled')
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  } else {
+    // No campaign filter — query active and confirmed polls (legacy behavior)
+    const [activeResult, confirmedResult] = await Promise.all([
+      db.query({
+        TableName: TABLE_POLLS,
+        IndexName: 'status-index',
+        KeyConditionExpression: '#status = :status',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: { ':status': 'active' },
+      }),
+      db.query({
+        TableName: TABLE_POLLS,
+        IndexName: 'status-index',
+        KeyConditionExpression: '#status = :status',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: { ':status': 'confirmed' },
+      }),
+    ]);
+
+    polls = [...(activeResult.Items || []), ...(confirmedResult.Items || [])]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
 
   return { body: { polls } };
 }
@@ -304,7 +325,7 @@ async function confirmPoll(event) {
     },
   });
 
-  // Create a session record
+  // Create a session record, carrying over the campaignId from the poll
   const sessionId = randomUUID();
   const session = {
     sessionId,
@@ -313,6 +334,7 @@ async function confirmPoll(event) {
     type: 'SESSION', // Fixed value for the GSI partition key (see dynamodb.tf)
     title: poll.title,
     createdAt: new Date().toISOString(),
+    ...(poll.campaignId && { campaignId: poll.campaignId }),
   };
 
   await db.put({

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useCampaign } from '../lib/campaign.tsx';
 import { getSessions, downloadSessionICS } from '../lib/api.ts';
 import type { Session } from '../lib/types.ts';
 
@@ -15,15 +16,19 @@ function daysUntil(dateStr: string): number {
 }
 
 export default function Sessions() {
+  const { activeCampaign } = useCampaign();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const campaignId = activeCampaign?.campaignId;
+
   useEffect(() => {
-    getSessions()
+    setLoading(true);
+    getSessions(campaignId)
       .then(setSessions)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [campaignId]);
 
   const upcoming = sessions.filter((s) => daysUntil(s.confirmedDate) >= 0);
   const past = sessions.filter((s) => daysUntil(s.confirmedDate) < 0);

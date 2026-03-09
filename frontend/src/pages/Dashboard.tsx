@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../lib/auth.tsx';
 import { useOnline } from '../lib/useOnline.ts';
+import { useCampaign } from '../lib/campaign.tsx';
 import { getPolls, getSessions, createInvite } from '../lib/api.ts';
 import { subscribeToPush } from '../lib/push.ts';
 import type { Poll, Session } from '../lib/types.ts';
@@ -21,15 +22,18 @@ function daysUntil(dateStr: string): number {
 export default function Dashboard() {
   const { user } = useAuth();
   const online = useOnline();
+  const { activeCampaign } = useCampaign();
   const [polls, setPolls] = useState<Poll[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [pushStatus, setPushStatus] = useState<'unknown' | 'show' | 'subscribed' | 'denied'>('unknown');
 
+  const campaignId = activeCampaign?.campaignId;
+
   useEffect(() => {
     async function load() {
       try {
-        const [p, s] = await Promise.all([getPolls(), getSessions()]);
+        const [p, s] = await Promise.all([getPolls(campaignId), getSessions(campaignId)]);
         setPolls(p);
         setSessions(s);
       } catch (err) {
@@ -66,7 +70,7 @@ export default function Dashboard() {
       }
     }
     checkPush();
-  }, []);
+  }, [campaignId]);
 
   const [inviteLink, setInviteLink] = useState('');
 

@@ -6,6 +6,7 @@ import CreatePoll from './CreatePoll.tsx';
 
 vi.mock('../lib/api.ts', () => ({
   createPoll: vi.fn(),
+  getCampaigns: vi.fn().mockResolvedValue([]),
   login: vi.fn(),
   tryRefresh: vi.fn().mockResolvedValue(false),
   logout: vi.fn(),
@@ -96,6 +97,6 @@ describe('CreatePoll', () => {
     await user.click(screen.getByText('Open Availability'));
     await user.click(screen.getByRole('button', { name: 'Create Poll' }));
 
-    expect(api.createPoll).toHaveBeenCalledWith('open', 'Open Poll', undefined);
+    expect(api.createPoll).toHaveBeenCalledWith('open', 'Open Poll', undefined, undefined);
   });
 });

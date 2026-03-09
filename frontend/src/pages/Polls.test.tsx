@@ -5,6 +5,7 @@ import Polls from './Polls.tsx';
 
 vi.mock('../lib/api.ts', () => ({
   getPolls: vi.fn(),
+  getCampaigns: vi.fn().mockResolvedValue([]),
   login: vi.fn(),
   tryRefresh: vi.fn().mockResolvedValue(false),
   logout: vi.fn(),

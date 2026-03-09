@@ -7,7 +7,7 @@
 //   - Sending credentials (cookies) for refresh token flow
 // =============================================================================
 
-import type { Poll, PollResponse, Session, User } from './types.ts';
+import type { Campaign, CampaignMember, Poll, PollResponse, Session, User } from './types.ts';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -116,10 +116,57 @@ export async function createInvite(): Promise<{ token: string; expiresAt: number
 }
 
 // ---------------------------------------------------------------------------
+// Campaign endpoints
+// ---------------------------------------------------------------------------
+export async function getCampaigns(): Promise<Campaign[]> {
+  const res = await apiFetch('/campaigns');
+  if (!res.ok) throw new Error('Failed to fetch campaigns');
+  const data = await res.json();
+  return data.campaigns;
+}
+
+export async function getCampaign(campaignId: string): Promise<{ campaign: Campaign; members: CampaignMember[] }> {
+  const res = await apiFetch(`/campaigns/${campaignId}`);
+  if (!res.ok) throw new Error('Failed to fetch campaign');
+  return res.json();
+}
+
+export async function createCampaign(name: string, description?: string): Promise<Campaign> {
+  const res = await apiFetch('/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({ name, description }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to create campaign');
+  }
+  return res.json();
+}
+
+export async function addCampaignMember(campaignId: string, userId: string, role?: string): Promise<void> {
+  const res = await apiFetch(`/campaigns/${campaignId}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ userId, role }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to add member');
+  }
+}
+
+export async function removeCampaignMember(campaignId: string, userId: string): Promise<void> {
+  const res = await apiFetch(`/campaigns/${campaignId}/members/${userId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to remove member');
+}
+
+// ---------------------------------------------------------------------------
 // Poll endpoints
 // ---------------------------------------------------------------------------
-export async function getPolls(): Promise<Poll[]> {
-  const res = await apiFetch('/polls');
+export async function getPolls(campaignId?: string): Promise<Poll[]> {
+  const query = campaignId ? `?campaignId=${campaignId}` : '';
+  const res = await apiFetch(`/polls${query}`);
   if (!res.ok) throw new Error('Failed to fetch polls');
   const data = await res.json();
   return data.polls;
@@ -135,10 +182,11 @@ export async function createPoll(
   mode: 'candidates' | 'open',
   title: string,
   candidateDates?: string[],
+  campaignId?: string,
 ): Promise<Poll> {
   const res = await apiFetch('/polls', {
     method: 'POST',
-    body: JSON.stringify({ mode, title, candidateDates }),
+    body: JSON.stringify({ mode, title, candidateDates, campaignId }),
   });
   if (!res.ok) {
     const err = await res.json();
@@ -180,8 +228,9 @@ export async function confirmPoll(pollId: string, confirmedDate: string): Promis
 // ---------------------------------------------------------------------------
 // Session endpoints
 // ---------------------------------------------------------------------------
-export async function getSessions(): Promise<Session[]> {
-  const res = await apiFetch('/sessions');
+export async function getSessions(campaignId?: string): Promise<Session[]> {
+  const query = campaignId ? `?campaignId=${campaignId}` : '';
+  const res = await apiFetch(`/sessions${query}`);
   if (!res.ok) throw new Error('Failed to fetch sessions');
   const data = await res.json();
   return data.sessions;

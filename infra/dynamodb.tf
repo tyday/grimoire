@@ -136,11 +136,24 @@ resource "aws_dynamodb_table" "polls" {
     type = "S"
   }
 
+  attribute {
+    name = "campaignId"
+    type = "S"
+  }
+
   # GSI to query polls by status (e.g., "active", "confirmed", "cancelled").
   # Without this, finding all active polls would require a full table scan.
   global_secondary_index {
     name            = "status-index"
     hash_key        = "status"
+    projection_type = "ALL"
+  }
+
+  # GSI to query all polls for a specific campaign, sorted by status.
+  global_secondary_index {
+    name            = "campaign-index"
+    hash_key        = "campaignId"
+    range_key       = "status"
     projection_type = "ALL"
   }
 }
@@ -204,6 +217,54 @@ resource "aws_dynamodb_table" "invites" {
 }
 
 # ---------------------------------------------------------------------------
+# Campaigns table
+# ---------------------------------------------------------------------------
+# Stores campaigns. One item per campaign.
+# Each campaign has a name, description, and creation timestamp.
+# ---------------------------------------------------------------------------
+resource "aws_dynamodb_table" "campaigns" {
+  name         = "grimoire-campaigns-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "campaignId"
+
+  attribute {
+    name = "campaignId"
+    type = "S"
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Campaign members table
+# ---------------------------------------------------------------------------
+# Links users to campaigns with a role (gm or player).
+# PK: campaignId, SK: userId — query all members of a campaign.
+# GSI on userId — query all campaigns a user belongs to.
+# ---------------------------------------------------------------------------
+resource "aws_dynamodb_table" "campaign_members" {
+  name         = "grimoire-campaign-members-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "campaignId"
+  range_key    = "userId"
+
+  attribute {
+    name = "campaignId"
+    type = "S"
+  }
+
+  attribute {
+    name = "userId"
+    type = "S"
+  }
+
+  # GSI to query "which campaigns does this user belong to?"
+  global_secondary_index {
+    name            = "user-campaigns-index"
+    hash_key        = "userId"
+    projection_type = "ALL"
+  }
+}
+
+# ---------------------------------------------------------------------------
 # Sessions table
 # ---------------------------------------------------------------------------
 resource "aws_dynamodb_table" "sessions" {
@@ -226,6 +287,11 @@ resource "aws_dynamodb_table" "sessions" {
     type = "S"
   }
 
+  attribute {
+    name = "campaignId"
+    type = "S"
+  }
+
   # GSI to query sessions ordered by date. We use a fixed "type" partition
   # key (e.g., "SESSION") because GSIs need a partition key, and we want
   # to query ALL sessions sorted by date. This is a common DynamoDB pattern
@@ -233,6 +299,14 @@ resource "aws_dynamodb_table" "sessions" {
   global_secondary_index {
     name            = "date-index"
     hash_key        = "type"
+    range_key       = "confirmedDate"
+    projection_type = "ALL"
+  }
+
+  # GSI to query all sessions for a specific campaign, sorted by date.
+  global_secondary_index {
+    name            = "campaign-date-index"
+    hash_key        = "campaignId"
     range_key       = "confirmedDate"
     projection_type = "ALL"
   }

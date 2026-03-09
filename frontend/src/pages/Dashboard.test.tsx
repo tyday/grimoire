@@ -7,6 +7,7 @@ import Dashboard from './Dashboard.tsx';
 vi.mock('../lib/api.ts', () => ({
   getPolls: vi.fn(),
   getSessions: vi.fn(),
+  getCampaigns: vi.fn().mockResolvedValue([]),
   createInvite: vi.fn(),
   login: vi.fn(),
   tryRefresh: vi.fn().mockResolvedValue(true),

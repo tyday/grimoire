@@ -4,6 +4,22 @@ export interface User {
   name: string;
 }
 
+export interface Campaign {
+  campaignId: string;
+  name: string;
+  description: string;
+  createdBy: string;
+  createdAt: string;
+  role?: 'gm' | 'player'; // Included when listing user's campaigns
+}
+
+export interface CampaignMember {
+  userId: string;
+  name: string;
+  role: 'gm' | 'player';
+  joinedAt: string;
+}
+
 export interface Poll {
   pollId: string;
   title: string;
@@ -13,6 +29,7 @@ export interface Poll {
   createdAt: string;
   candidateDates?: string[];
   confirmedDate?: string;
+  campaignId?: string;
 }
 
 export interface PollResponse {
@@ -31,4 +48,5 @@ export interface Session {
   type: string;
   title: string;
   createdAt: string;
+  campaignId?: string;
 }

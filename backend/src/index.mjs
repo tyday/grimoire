@@ -12,6 +12,7 @@
 // =============================================================================
 
 import { authRoutes } from './routes/auth.mjs';
+import { campaignRoutes } from './routes/campaigns.mjs';
 import { pollRoutes } from './routes/polls.mjs';
 import { pushRoutes } from './routes/push.mjs';
 import { sessionRoutes } from './routes/sessions.mjs';
@@ -41,6 +42,9 @@ const routeDefinitions = [
 
   // Auth routes
   ...authRoutes,
+
+  // Campaign routes
+  ...campaignRoutes,
 
   // Poll routes
   ...pollRoutes,

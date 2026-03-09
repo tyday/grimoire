@@ -7,6 +7,7 @@ import Login from './Login.tsx';
 // Mock the api module so we don't make real network requests
 vi.mock('../lib/api.ts', () => ({
   login: vi.fn(),
+  getCampaigns: vi.fn().mockResolvedValue([]),
   tryRefresh: vi.fn().mockResolvedValue(false),
   logout: vi.fn(),
   setAccessToken: vi.fn(),

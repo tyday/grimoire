@@ -6,6 +6,7 @@ import Sessions from './Sessions.tsx';
 vi.mock('../lib/api.ts', () => ({
   getSessions: vi.fn(),
   downloadSessionICS: vi.fn(),
+  getCampaigns: vi.fn().mockResolvedValue([]),
   login: vi.fn(),
   tryRefresh: vi.fn().mockResolvedValue(false),
   logout: vi.fn(),

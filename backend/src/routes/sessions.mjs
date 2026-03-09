@@ -35,15 +35,32 @@ async function listSessions(event) {
   const { user, error } = await requireAuth(event);
   if (error) return error;
 
-  const result = await db.query({
-    TableName: TABLE_SESSIONS,
-    IndexName: 'date-index',
-    KeyConditionExpression: '#type = :type',
-    ExpressionAttributeNames: { '#type': 'type' },
-    ExpressionAttributeValues: { ':type': 'SESSION' },
-    // ScanIndexForward: true means ascending order (earliest date first)
-    ScanIndexForward: true,
-  });
+  // Check for campaignId query parameter
+  const campaignId = event.queryStringParameters?.campaignId;
+
+  let result;
+
+  if (campaignId) {
+    // Use the campaign-date-index GSI to get sessions for a specific campaign,
+    // sorted by confirmedDate ascending.
+    result = await db.query({
+      TableName: TABLE_SESSIONS,
+      IndexName: 'campaign-date-index',
+      KeyConditionExpression: 'campaignId = :cid',
+      ExpressionAttributeValues: { ':cid': campaignId },
+      ScanIndexForward: true,
+    });
+  } else {
+    // No campaign filter — return all sessions (legacy behavior)
+    result = await db.query({
+      TableName: TABLE_SESSIONS,
+      IndexName: 'date-index',
+      KeyConditionExpression: '#type = :type',
+      ExpressionAttributeNames: { '#type': 'type' },
+      ExpressionAttributeValues: { ':type': 'SESSION' },
+      ScanIndexForward: true,
+    });
+  }
 
   return { body: { sessions: result.Items || [] } };
 }

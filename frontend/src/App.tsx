@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { AuthProvider, useAuth } from './lib/auth.tsx';
+import { CampaignProvider } from './lib/campaign.tsx';
 import Layout from './components/Layout.tsx';
 import Login from './pages/Login.tsx';
 import Register from './pages/Register.tsx';
@@ -8,6 +9,8 @@ import Polls from './pages/Polls.tsx';
 import CreatePoll from './pages/CreatePoll.tsx';
 import PollDetail from './pages/PollDetail.tsx';
 import Sessions from './pages/Sessions.tsx';
+import Campaigns from './pages/Campaigns.tsx';
+import CampaignDetail from './pages/CampaignDetail.tsx';
 import Info from './pages/Info.tsx';
 
 function AppRoutes() {
@@ -35,6 +38,8 @@ function AppRoutes() {
           <Route path="polls/new" element={<CreatePoll />} />
           <Route path="polls/:pollId" element={<PollDetail />} />
           <Route path="sessions" element={<Sessions />} />
+          <Route path="campaigns" element={<Campaigns />} />
+          <Route path="campaigns/:campaignId" element={<CampaignDetail />} />
           <Route path="info" element={<Info />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
@@ -47,7 +52,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <CampaignProvider>
+          <AppRoutes />
+        </CampaignProvider>
       </AuthProvider>
     </BrowserRouter>
   );

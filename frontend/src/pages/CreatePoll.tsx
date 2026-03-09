@@ -2,11 +2,13 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useOnline } from '../lib/useOnline.ts';
+import { useCampaign } from '../lib/campaign.tsx';
 import { createPoll } from '../lib/api.ts';
 
 export default function CreatePoll() {
   const navigate = useNavigate();
   const online = useOnline();
+  const { activeCampaign } = useCampaign();
   const [title, setTitle] = useState('');
   const [mode, setMode] = useState<'candidates' | 'open'>('candidates');
   const [dates, setDates] = useState<string[]>(['', '']);
@@ -43,6 +45,7 @@ export default function CreatePoll() {
         mode,
         title,
         mode === 'candidates' ? filledDates : undefined,
+        activeCampaign?.campaignId,
       );
       navigate(`/polls/${poll.pollId}`);
     } catch (err) {

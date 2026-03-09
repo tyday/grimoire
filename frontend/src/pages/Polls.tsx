@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useOnline } from '../lib/useOnline.ts';
+import { useCampaign } from '../lib/campaign.tsx';
 import { getPolls } from '../lib/api.ts';
 import type { Poll } from '../lib/types.ts';
 
@@ -11,15 +12,19 @@ function formatDate(dateStr: string): string {
 
 export default function Polls() {
   const online = useOnline();
+  const { activeCampaign } = useCampaign();
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const campaignId = activeCampaign?.campaignId;
+
   useEffect(() => {
-    getPolls()
+    setLoading(true);
+    getPolls(campaignId)
       .then(setPolls)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [campaignId]);
 
   const active = polls.filter((p) => p.status === 'active');
   const confirmed = polls.filter((p) => p.status === 'confirmed');

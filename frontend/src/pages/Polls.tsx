@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
+import { useOnline } from '../lib/useOnline.ts';
 import { getPolls } from '../lib/api.ts';
 import type { Poll } from '../lib/types.ts';
 
@@ -9,6 +10,7 @@ function formatDate(dateStr: string): string {
 }
 
 export default function Polls() {
+  const online = useOnline();
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +30,10 @@ export default function Polls() {
     <div className="polls-page">
       <div className="page-header">
         <h2>Polls</h2>
-        <Link to="/polls/new" className="btn btn-primary">New Poll</Link>
+        {online
+          ? <Link to="/polls/new" className="btn btn-primary">New Poll</Link>
+          : <button className="btn btn-primary" disabled>Offline</button>
+        }
       </div>
 
       {active.length > 0 && (
@@ -72,7 +77,10 @@ export default function Polls() {
       {polls.length === 0 && (
         <div className="empty-state-large">
           <p>No polls yet</p>
-          <Link to="/polls/new" className="btn btn-primary">Create the first poll</Link>
+          {online
+            ? <Link to="/polls/new" className="btn btn-primary">Create the first poll</Link>
+            : <button className="btn btn-primary" disabled>Offline</button>
+          }
         </div>
       )}
     </div>

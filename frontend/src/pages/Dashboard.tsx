@@ -151,7 +151,10 @@ export default function Dashboard() {
       <section className="section">
         <div className="section-header">
           <h3 className="section-title">Active Polls</h3>
-          <Link to="/polls/new" className="btn btn-sm btn-primary">New Poll</Link>
+          {online
+            ? <Link to="/polls/new" className="btn btn-sm btn-primary">New Poll</Link>
+            : <button className="btn btn-sm btn-primary" disabled>Offline</button>
+          }
         </div>
         {activePolls.length === 0 ? (
           <p className="empty-state">No active polls</p>

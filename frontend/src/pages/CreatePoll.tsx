@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
+import { useOnline } from '../lib/useOnline.ts';
 import { createPoll } from '../lib/api.ts';
 
 export default function CreatePoll() {
   const navigate = useNavigate();
+  const online = useOnline();
   const [title, setTitle] = useState('');
   const [mode, setMode] = useState<'candidates' | 'open'>('candidates');
   const [dates, setDates] = useState<string[]>(['', '']);
@@ -131,8 +133,8 @@ export default function CreatePoll() {
           </div>
         )}
 
-        <button type="submit" className="btn btn-primary btn-full" disabled={submitting}>
-          {submitting ? 'Creating...' : 'Create Poll'}
+        <button type="submit" className="btn btn-primary btn-full" disabled={submitting || !online}>
+          {!online ? 'Offline' : submitting ? 'Creating...' : 'Create Poll'}
         </button>
       </form>
     </div>

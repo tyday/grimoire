@@ -7,12 +7,19 @@
 
 import { Outlet, NavLink, Link } from 'react-router';
 import { useAuth } from '../lib/auth.tsx';
+import { useOnline } from '../lib/useOnline.ts';
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const online = useOnline();
 
   return (
     <div className="layout">
+      {!online && (
+        <div className="offline-banner" role="alert">
+          You are offline — viewing cached data
+        </div>
+      )}
       <header className="topbar">
         <Link to="/info" className="topbar-brand">Grimoire</Link>
         <div className="topbar-user">

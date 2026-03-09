@@ -135,6 +135,19 @@ h4 { font-size: 1rem; }
   min-height: 100dvh;
 }
 
+/* Offline banner */
+.offline-banner {
+  background: var(--amber);
+  color: var(--bg-deep);
+  text-align: center;
+  padding: 6px var(--page-pad);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  z-index: 30;
+}
+
 /* Top bar */
 .topbar {
   position: sticky;

@@ -88,6 +88,61 @@ export default defineConfig({
         // latest code running.
         skipWaiting: true,
         clientsClaim: true,
+
+        // -----------------------------------------------------------------------
+        // Runtime caching — cache API GET responses for offline read access
+        // -----------------------------------------------------------------------
+        // These strategies intercept fetch requests at the service worker level
+        // and serve cached responses when the network is unavailable.
+        //
+        // StaleWhileRevalidate: return cached response immediately, then update
+        //   the cache in the background. Best for data that changes moderately.
+        //
+        // NetworkFirst: try the network first, fall back to cache if offline.
+        //   Better for data where freshness matters more.
+        // -----------------------------------------------------------------------
+        runtimeCaching: [
+          {
+            // Polls list and individual polls — changes often (new votes, status)
+            urlPattern: /\/polls(\/[^/]+)?$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-polls',
+              expiration: { maxEntries: 50, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Sessions list and individual sessions
+            urlPattern: /\/sessions(\/[^/]+)?$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-sessions',
+              expiration: { maxEntries: 50, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // VAPID public key — rarely changes, safe to cache aggressively
+            urlPattern: /\/push\/vapid-key$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'api-static',
+              expiration: { maxEntries: 5, maxAgeSeconds: 30 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Info endpoint — useful for diagnostics
+            urlPattern: /\/info$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-info',
+              expiration: { maxEntries: 2, maxAgeSeconds: 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
 
       // The manifest tells the browser how to display the app when installed

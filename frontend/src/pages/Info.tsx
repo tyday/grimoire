@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { subscribeToPush } from '../lib/push.ts';
+import { useOnline } from '../lib/useOnline.ts';
 import { apiFetch } from '../lib/api.ts';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -30,7 +31,7 @@ async function getSwVersion(): Promise<SwVersion | null> {
   });
 }
 
-function TestNotificationButton() {
+function TestNotificationButton({ disabled }: { disabled?: boolean }) {
   function sendTest() {
     apiFetch('/admin/test-notification', { method: 'POST' })
       .then((res) => {
@@ -40,13 +41,14 @@ function TestNotificationButton() {
   }
 
   return (
-    <button className="btn btn-outline btn-full" onClick={sendTest}>
+    <button className="btn btn-outline btn-full" onClick={sendTest} disabled={disabled}>
       Send test notification
     </button>
   );
 }
 
 export default function Info() {
+  const online = useOnline();
   const [backend, setBackend] = useState<BackendInfo | null>(null);
   const [error, setError] = useState('');
   const [swStatus, setSwStatus] = useState('checking...');
@@ -147,6 +149,7 @@ export default function Info() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
             <button
               className="btn btn-outline btn-full"
+              disabled={!online}
               onClick={async () => {
                 const ok = await subscribeToPush();
                 alert(ok ? 'Subscribed! Try sending a test notification.' : 'Subscribe failed — check console.');
@@ -154,7 +157,7 @@ export default function Info() {
             >
               Re-subscribe to push
             </button>
-            <TestNotificationButton />
+            <TestNotificationButton disabled={!online} />
           </div>
         )}
       </section>

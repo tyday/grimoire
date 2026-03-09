@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useAuth } from '../lib/auth.tsx';
+import { useOnline } from '../lib/useOnline.ts';
 import { getPoll, respondToPoll, confirmPoll, cancelPoll } from '../lib/api.ts';
 import type { Poll, PollResponse } from '../lib/types.ts';
 
@@ -14,6 +15,7 @@ type VoteValue = 'yes' | 'no' | 'maybe';
 export default function PollDetail() {
   const { pollId } = useParams();
   const { user } = useAuth();
+  const online = useOnline();
   const navigate = useNavigate();
   const [poll, setPoll] = useState<Poll | null>(null);
   const [responses, setResponses] = useState<PollResponse[]>([]);
@@ -204,9 +206,9 @@ export default function PollDetail() {
             <button
               className="btn btn-primary btn-full"
               onClick={handleSubmitCandidateVotes}
-              disabled={submitting || Object.keys(votes).length === 0}
+              disabled={submitting || !online || Object.keys(votes).length === 0}
             >
-              {submitting ? 'Saving...' : 'Submit Votes'}
+              {!online ? 'Offline' : submitting ? 'Saving...' : 'Submit Votes'}
             </button>
           )}
         </section>
@@ -255,10 +257,10 @@ export default function PollDetail() {
               <button
                 className="btn btn-primary btn-full"
                 onClick={handleSubmitOpenDates}
-                disabled={submitting || availableDates.length === 0}
+                disabled={submitting || !online || availableDates.length === 0}
                 style={{ marginTop: '12px' }}
               >
-                {submitting ? 'Saving...' : 'Submit Availability'}
+                {!online ? 'Offline' : submitting ? 'Saving...' : 'Submit Availability'}
               </button>
             </section>
           )}
@@ -333,9 +335,9 @@ export default function PollDetail() {
             <button
               className="btn btn-gold"
               onClick={handleConfirm}
-              disabled={!confirmDate || submitting}
+              disabled={!confirmDate || submitting || !online}
             >
-              {submitting ? 'Confirming...' : 'Confirm Session'}
+              {!online ? 'Offline' : submitting ? 'Confirming...' : 'Confirm Session'}
             </button>
           </div>
           {/* Suggest top dates from responses for open mode */}
@@ -354,9 +356,9 @@ export default function PollDetail() {
         <button
           className="btn btn-ghost btn-full btn-danger"
           onClick={handleCancel}
-          disabled={submitting}
+          disabled={submitting || !online}
         >
-          Cancel Poll
+          {!online ? 'Offline' : 'Cancel Poll'}
         </button>
       )}
     </div>

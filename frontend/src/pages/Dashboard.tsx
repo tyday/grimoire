@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../lib/auth.tsx';
+import { useOnline } from '../lib/useOnline.ts';
 import { getPolls, getSessions, createInvite } from '../lib/api.ts';
 import { subscribeToPush } from '../lib/push.ts';
 import type { Poll, Session } from '../lib/types.ts';
@@ -19,6 +20,7 @@ function daysUntil(dateStr: string): number {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const online = useOnline();
   const [polls, setPolls] = useState<Poll[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,14 +105,14 @@ export default function Dashboard() {
 
       {/* Notification prompt — shown if no active push subscription */}
       {pushStatus === 'show' && (
-        <button className="btn btn-outline btn-full notification-prompt" onClick={handleEnableNotifications}>
+        <button className="btn btn-outline btn-full notification-prompt" onClick={handleEnableNotifications} disabled={!online}>
           Enable push notifications
         </button>
       )}
 
       {/* Invite */}
       {!inviteLink ? (
-        <button className="btn btn-outline btn-full" onClick={handleInvite}>
+        <button className="btn btn-outline btn-full" onClick={handleInvite} disabled={!online}>
           Invite a player
         </button>
       ) : (

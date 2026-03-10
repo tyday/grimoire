@@ -7,7 +7,7 @@
 //   - Sending credentials (cookies) for refresh token flow
 // =============================================================================
 
-import type { Campaign, CampaignMember, Poll, PollResponse, Session, User } from './types.ts';
+import type { Campaign, CampaignMember, Poll, PollResponse, Session, SessionNote, User } from './types.ts';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -234,6 +234,36 @@ export async function getSessions(campaignId?: string): Promise<Session[]> {
   if (!res.ok) throw new Error('Failed to fetch sessions');
   const data = await res.json();
   return data.sessions;
+}
+
+export async function getSession(sessionId: string): Promise<Session> {
+  const res = await apiFetch(`/sessions/${sessionId}`);
+  if (!res.ok) throw new Error('Failed to fetch session');
+  return res.json();
+}
+
+export async function getSessionNotes(sessionId: string): Promise<SessionNote[]> {
+  const res = await apiFetch(`/sessions/${sessionId}/notes`);
+  if (!res.ok) throw new Error('Failed to fetch notes');
+  const data = await res.json();
+  return data.notes;
+}
+
+export async function saveSessionNote(sessionId: string, content: string): Promise<SessionNote> {
+  const res = await apiFetch(`/sessions/${sessionId}/notes`, {
+    method: 'PUT',
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to save note');
+  }
+  return res.json();
+}
+
+export async function deleteSessionNote(sessionId: string): Promise<void> {
+  const res = await apiFetch(`/sessions/${sessionId}/notes`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete note');
 }
 
 export async function downloadSessionICS(sessionId: string, confirmedDate: string): Promise<void> {

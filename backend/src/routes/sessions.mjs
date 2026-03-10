@@ -1,20 +1,38 @@
 // =============================================================================
-// sessions.mjs — Session routes
+// sessions.mjs — Session and session notes routes
 // =============================================================================
 // Endpoints:
-//   GET    /sessions              - List upcoming and recent sessions
-//   GET    /sessions/:sessionId   - Get a single session
-//   GET    /sessions/:sessionId/ics - Download .ics calendar file
+//   GET    /sessions                    - List upcoming and recent sessions
+//   GET    /sessions/:sessionId         - Get a single session
+//   GET    /sessions/:sessionId/ics     - Download .ics calendar file
+//   GET    /sessions/:sessionId/notes   - List all notes for a session
+//   PUT    /sessions/:sessionId/notes   - Create or update current user's note
+//   DELETE /sessions/:sessionId/notes   - Delete current user's note
 //
 // Sessions are created by the poll confirmation flow (see polls.mjs).
-// These routes provide read access and calendar export.
+// Notes are markdown documents — one per user per session.
 // =============================================================================
 
 import { db } from '../lib/db.mjs';
 import { authenticate } from '../lib/auth.mjs';
 import { generateICS } from '../lib/ics.mjs';
+import { notifyAllExcept } from '../lib/push.mjs';
 
 const TABLE_SESSIONS = process.env.TABLE_SESSIONS;
+const TABLE_SESSION_NOTES = process.env.TABLE_SESSION_NOTES;
+const TABLE_USERS = process.env.TABLE_USERS;
+
+function parseBody(event) {
+  if (!event.body) return {};
+  try {
+    const raw = event.isBase64Encoded
+      ? Buffer.from(event.body, 'base64').toString()
+      : event.body;
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
 
 async function requireAuth(event) {
   const user = await authenticate(event);
@@ -26,10 +44,6 @@ async function requireAuth(event) {
 
 // ============================================================================
 // GET /sessions — List upcoming and recent sessions
-// ============================================================================
-// Uses the date-index GSI to query sessions sorted by confirmedDate.
-// Returns all sessions with type "SESSION" (our fixed partition key),
-// sorted chronologically.
 // ============================================================================
 async function listSessions(event) {
   const { user, error } = await requireAuth(event);
@@ -89,12 +103,6 @@ async function getSession(event) {
 // ============================================================================
 // GET /sessions/:sessionId/ics — Download .ics calendar file
 // ============================================================================
-// Generates an iCalendar (.ics) file for the confirmed session.
-// This is the standard format supported by Apple Calendar, Google Calendar,
-// Outlook, and basically every calendar app.
-//
-// The response uses Content-Disposition to trigger a file download.
-// ============================================================================
 async function getSessionICS(event) {
   const { user, error } = await requireAuth(event);
   if (error) return error;
@@ -123,8 +131,125 @@ async function getSessionICS(event) {
   };
 }
 
+// ============================================================================
+// GET /sessions/:sessionId/notes — List all notes for a session
+// ============================================================================
+async function listNotes(event) {
+  const { user, error } = await requireAuth(event);
+  if (error) return error;
+
+  const { sessionId } = event.pathParams;
+
+  const result = await db.query({
+    TableName: TABLE_SESSION_NOTES,
+    KeyConditionExpression: 'sessionId = :sid',
+    ExpressionAttributeValues: { ':sid': sessionId },
+  });
+
+  return { body: { notes: result.Items || [] } };
+}
+
+// ============================================================================
+// PUT /sessions/:sessionId/notes — Create or update the current user's note
+// ============================================================================
+// Body: { "content": "## Session recap\n\nWe fought a dragon..." }
+//
+// Each user gets one note per session. The noteId is derived from the user's
+// ID so PutItem upserts cleanly — no need for separate create/update logic.
+// ============================================================================
+async function upsertNote(event) {
+  const { user, error } = await requireAuth(event);
+  if (error) return error;
+
+  const { sessionId } = event.pathParams;
+  const { content } = parseBody(event);
+
+  if (!content || typeof content !== 'string') {
+    return { statusCode: 400, body: { error: 'content is required' } };
+  }
+
+  // Cap at 50KB to stay well within DynamoDB's 400KB item limit
+  if (content.length > 50_000) {
+    return { statusCode: 400, body: { error: 'Note is too long (max 50KB)' } };
+  }
+
+  // Verify the session exists
+  const sessionResult = await db.get({
+    TableName: TABLE_SESSIONS,
+    Key: { sessionId },
+  });
+  if (!sessionResult.Item) {
+    return { statusCode: 404, body: { error: 'Session not found' } };
+  }
+
+  // Look up the user's name for denormalized display
+  const userResult = await db.get({
+    TableName: TABLE_USERS,
+    Key: { userId: user.sub },
+  });
+  const userName = userResult.Item?.name || user.email;
+
+  const now = new Date().toISOString();
+  const noteId = `note_${user.sub}`;
+
+  // Check if this is a new note (for push notification)
+  const existing = await db.get({
+    TableName: TABLE_SESSION_NOTES,
+    Key: { sessionId, noteId },
+  });
+  const isNew = !existing.Item;
+
+  const note = {
+    sessionId,
+    noteId,
+    userId: user.sub,
+    userName,
+    content,
+    createdAt: existing.Item?.createdAt || now,
+    updatedAt: now,
+  };
+
+  await db.put({
+    TableName: TABLE_SESSION_NOTES,
+    Item: note,
+  });
+
+  // Only send push notification for new notes (not edits) to avoid spam
+  if (isNew) {
+    const session = sessionResult.Item;
+    notifyAllExcept(
+      user.sub,
+      'New Session Notes',
+      `${userName} posted notes for ${session.title}`,
+    ).catch(console.error);
+  }
+
+  return { body: note };
+}
+
+// ============================================================================
+// DELETE /sessions/:sessionId/notes — Delete the current user's note
+// ============================================================================
+async function deleteNote(event) {
+  const { user, error } = await requireAuth(event);
+  if (error) return error;
+
+  const { sessionId } = event.pathParams;
+  const noteId = `note_${user.sub}`;
+
+  await db.delete({
+    TableName: TABLE_SESSION_NOTES,
+    Key: { sessionId, noteId },
+  });
+
+  return { body: { message: 'Note deleted' } };
+}
+
 export const sessionRoutes = [
   ['GET', '/sessions', listSessions],
   ['GET', '/sessions/:sessionId', getSession],
   ['GET', '/sessions/:sessionId/ics', getSessionICS],
+  ['GET', '/sessions/:sessionId/notes', listNotes],
+  ['PUT', '/sessions/:sessionId/notes', upsertNote],
+  ['DELETE', '/sessions/:sessionId/notes', deleteNote],
 ];

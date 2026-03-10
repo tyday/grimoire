@@ -50,3 +50,13 @@ export interface Session {
   createdAt: string;
   campaignId?: string;
 }
+
+export interface SessionNote {
+  sessionId: string;
+  noteId: string;
+  userId: string;
+  userName: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}

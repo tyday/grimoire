@@ -9,6 +9,7 @@ import Polls from './pages/Polls.tsx';
 import CreatePoll from './pages/CreatePoll.tsx';
 import PollDetail from './pages/PollDetail.tsx';
 import Sessions from './pages/Sessions.tsx';
+import SessionDetail from './pages/SessionDetail.tsx';
 import Campaigns from './pages/Campaigns.tsx';
 import CampaignDetail from './pages/CampaignDetail.tsx';
 import Info from './pages/Info.tsx';
@@ -38,6 +39,7 @@ function AppRoutes() {
           <Route path="polls/new" element={<CreatePoll />} />
           <Route path="polls/:pollId" element={<PollDetail />} />
           <Route path="sessions" element={<Sessions />} />
+          <Route path="sessions/:sessionId" element={<SessionDetail />} />
           <Route path="campaigns" element={<Campaigns />} />
           <Route path="campaigns/:campaignId" element={<CampaignDetail />} />
           <Route path="info" element={<Info />} />

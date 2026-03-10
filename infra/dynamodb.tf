@@ -311,3 +311,27 @@ resource "aws_dynamodb_table" "sessions" {
     projection_type = "ALL"
   }
 }
+
+# ---------------------------------------------------------------------------
+# Session notes table
+# ---------------------------------------------------------------------------
+# Stores markdown notes for confirmed sessions. Each user can write one
+# note per session (noteId = "note_{userId}"), so PutItem upserts cleanly.
+# PK: sessionId, SK: noteId — query all notes for a session in one call.
+# ---------------------------------------------------------------------------
+resource "aws_dynamodb_table" "session_notes" {
+  name         = "grimoire-session-notes-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "sessionId"
+  range_key    = "noteId"
+
+  attribute {
+    name = "sessionId"
+    type = "S"
+  }
+
+  attribute {
+    name = "noteId"
+    type = "S"
+  }
+}

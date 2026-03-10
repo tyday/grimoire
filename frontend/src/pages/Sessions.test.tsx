@@ -39,7 +39,7 @@ describe('Sessions', () => {
     });
   });
 
-  it('displays upcoming sessions with calendar button', async () => {
+  it('displays upcoming sessions as links', async () => {
     vi.mocked(api.getSessions).mockResolvedValue([
       {
         sessionId: 's1',
@@ -55,8 +55,10 @@ describe('Sessions', () => {
 
     await waitFor(() => {
       expect(screen.getByText('The Final Battle')).toBeInTheDocument();
-      expect(screen.getByText('Add to calendar')).toBeInTheDocument();
       expect(screen.getByText('Upcoming')).toBeInTheDocument();
+      // Session cards are now links to the detail page
+      const link = screen.getByText('The Final Battle').closest('a');
+      expect(link).toHaveAttribute('href', '/sessions/s1');
     });
   });
 

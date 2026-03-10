@@ -100,6 +100,8 @@ resource "aws_iam_role_policy" "lambda_permissions" {
           "${aws_dynamodb_table.campaigns.arn}/index/*",
           "${aws_dynamodb_table.campaign_members.arn}",
           "${aws_dynamodb_table.campaign_members.arn}/index/*",
+          "${aws_dynamodb_table.session_notes.arn}",
+          "${aws_dynamodb_table.session_notes.arn}/index/*",
         ]
       },
       {
@@ -185,6 +187,7 @@ resource "aws_lambda_function" "api" {
       TABLE_INVITES          = aws_dynamodb_table.invites.name
       TABLE_CAMPAIGNS        = aws_dynamodb_table.campaigns.name
       TABLE_CAMPAIGN_MEMBERS = aws_dynamodb_table.campaign_members.name
+      TABLE_SESSION_NOTES    = aws_dynamodb_table.session_notes.name
       JWT_SECRET           = var.jwt_secret
       VAPID_PUBLIC_KEY     = var.vapid_public_key
       VAPID_PRIVATE_KEY    = var.vapid_private_key

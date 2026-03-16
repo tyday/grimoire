@@ -19,7 +19,7 @@ Features are delivered in phases. Each phase is independently deployable and usa
 | 1 | Scheduling | ✅ Complete |
 | 2 | Tests | ✅ Complete |
 | 3 | Runtime Caching & Offline | ✅ Complete |
-| 4 | Campaigns | |
+| 4 | Campaigns | ✅ Complete |
 | 5 | Session Notes | |
 | 6 | Character Sheets | |
 | 7 | Real-Time Group Chat | |

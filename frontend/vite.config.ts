@@ -113,8 +113,8 @@ export default defineConfig({
             },
           },
           {
-            // Sessions list and individual sessions
-            urlPattern: /\/sessions(\/[^/]+)?$/,
+            // Sessions list, individual sessions, and session notes
+            urlPattern: /\/sessions(\/[^/]+)?(\/notes)?$/,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-sessions',

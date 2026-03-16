@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
 import { useCampaign } from '../lib/campaign.tsx';
-import { getSessions, downloadSessionICS } from '../lib/api.ts';
+import { getSessions } from '../lib/api.ts';
 import type { Session } from '../lib/types.ts';
 
 function formatDate(dateStr: string): string {
@@ -48,7 +49,7 @@ export default function Sessions() {
             {upcoming.map((session) => {
               const days = daysUntil(session.confirmedDate);
               return (
-                <div key={session.sessionId} className="card session-card">
+                <Link key={session.sessionId} to={`/sessions/${session.sessionId}`} className="card session-card">
                   <div className="card-header">
                     <h4 className="card-title">{session.title}</h4>
                     <span className={`badge ${days === 0 ? 'badge-gold' : 'badge-dim'}`}>
@@ -56,13 +57,7 @@ export default function Sessions() {
                     </span>
                   </div>
                   <p className="card-date">{formatDate(session.confirmedDate)}</p>
-                  <button
-                    className="btn btn-outline btn-sm"
-                    onClick={() => downloadSessionICS(session.sessionId, session.confirmedDate)}
-                  >
-                    Add to calendar
-                  </button>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -74,12 +69,12 @@ export default function Sessions() {
           <h3 className="section-title">Past</h3>
           <div className="card-list">
             {past.map((session) => (
-              <div key={session.sessionId} className="card session-card session-past">
+              <Link key={session.sessionId} to={`/sessions/${session.sessionId}`} className="card session-card session-past">
                 <div className="card-header">
                   <h4 className="card-title">{session.title}</h4>
                 </div>
                 <p className="card-date">{formatDate(session.confirmedDate)}</p>
-              </div>
+              </Link>
             ))}
           </div>
         </section>

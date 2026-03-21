@@ -38,7 +38,7 @@ resource "aws_apigatewayv2_api" "main" {
       "https://${var.domain_name}",
       "http://localhost:5173", # Vite dev server for local development
     ]
-    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
     allow_headers     = ["Content-Type", "Authorization"]
     allow_credentials = true # Required for httpOnly refresh token cookies
     max_age           = 3600 # Cache preflight responses for 1 hour

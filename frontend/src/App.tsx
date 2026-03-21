@@ -12,6 +12,7 @@ import Sessions from './pages/Sessions.tsx';
 import SessionDetail from './pages/SessionDetail.tsx';
 import Campaigns from './pages/Campaigns.tsx';
 import CampaignDetail from './pages/CampaignDetail.tsx';
+import BrowseCampaigns from './pages/BrowseCampaigns.tsx';
 import Info from './pages/Info.tsx';
 
 function AppRoutes() {
@@ -41,6 +42,7 @@ function AppRoutes() {
           <Route path="sessions" element={<Sessions />} />
           <Route path="sessions/:sessionId" element={<SessionDetail />} />
           <Route path="campaigns" element={<Campaigns />} />
+          <Route path="campaigns/browse" element={<BrowseCampaigns />} />
           <Route path="campaigns/:campaignId" element={<CampaignDetail />} />
           <Route path="info" element={<Info />} />
           <Route path="*" element={<Navigate to="/" replace />} />

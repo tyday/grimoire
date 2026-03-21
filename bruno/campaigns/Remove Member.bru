@@ -1,0 +1,15 @@
+meta {
+  name: Remove Member
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/campaigns/{{campaignId}}/members/{{targetUserId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Get Campaign
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/campaigns/{{campaignId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

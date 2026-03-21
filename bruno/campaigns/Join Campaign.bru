@@ -1,0 +1,15 @@
+meta {
+  name: Join Campaign
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/campaigns/{{campaignId}}/join
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

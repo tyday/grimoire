@@ -17,7 +17,7 @@
 // =============================================================================
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, DeleteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, DeleteCommand, UpdateCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 
 const client = new DynamoDBClient({});
 export const docClient = DynamoDBDocumentClient.from(client);
@@ -29,4 +29,5 @@ export const db = {
   query: (params) => docClient.send(new QueryCommand(params)),
   delete: (params) => docClient.send(new DeleteCommand(params)),
   update: (params) => docClient.send(new UpdateCommand(params)),
+  scan: (params) => docClient.send(new ScanCommand(params)),
 };

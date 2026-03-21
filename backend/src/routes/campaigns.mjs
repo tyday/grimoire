@@ -2,11 +2,15 @@
 // campaigns.mjs — Campaign management routes
 // =============================================================================
 // Endpoints:
-//   POST   /campaigns              - Create a new campaign (creator becomes GM)
-//   GET    /campaigns              - List campaigns the user belongs to
-//   GET    /campaigns/:campaignId  - Get a single campaign with members
-//   POST   /campaigns/:campaignId/members - Add a member to a campaign
+//   POST   /campaigns                       - Create a new campaign (creator becomes GM)
+//   GET    /campaigns                       - List campaigns the user belongs to
+//   GET    /campaigns/browse                - Browse all public campaigns
+//   GET    /campaigns/:campaignId           - Get a campaign with members + sessions
+//   POST   /campaigns/:campaignId/join      - Self-join a public campaign as player
+//   POST   /campaigns/:campaignId/leave     - Leave a campaign (GM cannot leave)
+//   POST   /campaigns/:campaignId/members   - Add a member (GM only)
 //   DELETE /campaigns/:campaignId/members/:userId - Remove a member
+//   GET    /users                           - List all registered users
 // =============================================================================
 
 import { db } from '../lib/db.mjs';
@@ -16,6 +20,7 @@ import { randomUUID } from 'node:crypto';
 const TABLE_CAMPAIGNS = process.env.TABLE_CAMPAIGNS;
 const TABLE_CAMPAIGN_MEMBERS = process.env.TABLE_CAMPAIGN_MEMBERS;
 const TABLE_USERS = process.env.TABLE_USERS;
+const TABLE_SESSIONS = process.env.TABLE_SESSIONS;
 
 // ---------------------------------------------------------------------------
 // Parse request body (handles base64 encoding from API Gateway)
@@ -50,6 +55,7 @@ async function createCampaign(event) {
       name: name.trim(),
       description: description?.trim() || '',
       createdBy: user.sub,
+      visibility: 'public',
       createdAt: now,
     },
   });
@@ -107,7 +113,46 @@ async function listCampaigns(event) {
 }
 
 // ---------------------------------------------------------------------------
-// GET /campaigns/:campaignId — Get a campaign with its members
+// GET /campaigns/browse — Browse all public campaigns
+// ---------------------------------------------------------------------------
+async function browseCampaigns(event) {
+  const user = await authenticate(event);
+  if (!user) return { statusCode: 401, body: { error: 'Unauthorized' } };
+
+  // Scan all campaigns (small table — a handful of campaigns)
+  const campaignsResult = await db.scan({ TableName: TABLE_CAMPAIGNS });
+  const allCampaigns = campaignsResult.Items || [];
+
+  // For each campaign, get member count and check if requesting user is a member
+  const campaigns = await Promise.all(
+    allCampaigns
+      .filter((c) => (c.visibility || 'public') === 'public')
+      .map(async (c) => {
+        const membersResult = await db.query({
+          TableName: TABLE_CAMPAIGN_MEMBERS,
+          KeyConditionExpression: 'campaignId = :cid',
+          ExpressionAttributeValues: { ':cid': c.campaignId },
+        });
+        const members = membersResult.Items || [];
+        const userMembership = members.find((m) => m.userId === user.sub);
+        return {
+          campaignId: c.campaignId,
+          name: c.name,
+          description: c.description,
+          createdAt: c.createdAt,
+          visibility: c.visibility || 'public',
+          memberCount: members.length,
+          isMember: !!userMembership,
+          role: userMembership?.role || null,
+        };
+      }),
+  );
+
+  return { body: { campaigns } };
+}
+
+// ---------------------------------------------------------------------------
+// GET /campaigns/:campaignId — Get a campaign with members and sessions
 // ---------------------------------------------------------------------------
 async function getCampaign(event) {
   const user = await authenticate(event);
@@ -115,27 +160,34 @@ async function getCampaign(event) {
 
   const { campaignId } = event.pathParams;
 
-  // Verify user is a member of this campaign
-  const membership = await db.get({
-    TableName: TABLE_CAMPAIGN_MEMBERS,
-    Key: { campaignId, userId: user.sub },
-  });
-  if (!membership.Item) {
-    return { statusCode: 403, body: { error: 'Not a member of this campaign' } };
-  }
-
-  // Fetch campaign details and all members in parallel
-  const [campaignResult, membersResult] = await Promise.all([
+  // Fetch campaign, members, and sessions in parallel
+  const [campaignResult, membersResult, sessionsResult, membership] = await Promise.all([
     db.get({ TableName: TABLE_CAMPAIGNS, Key: { campaignId } }),
     db.query({
       TableName: TABLE_CAMPAIGN_MEMBERS,
       KeyConditionExpression: 'campaignId = :cid',
       ExpressionAttributeValues: { ':cid': campaignId },
     }),
+    db.query({
+      TableName: TABLE_SESSIONS,
+      IndexName: 'campaign-date-index',
+      KeyConditionExpression: 'campaignId = :cid',
+      ExpressionAttributeValues: { ':cid': campaignId },
+    }),
+    db.get({
+      TableName: TABLE_CAMPAIGN_MEMBERS,
+      Key: { campaignId, userId: user.sub },
+    }),
   ]);
 
   if (!campaignResult.Item) {
     return { statusCode: 404, body: { error: 'Campaign not found' } };
+  }
+
+  // Allow access if campaign is public (or no visibility set = public) or user is a member
+  const isPublic = (campaignResult.Item.visibility || 'public') === 'public';
+  if (!isPublic && !membership.Item) {
+    return { statusCode: 403, body: { error: 'Not a member of this campaign' } };
   }
 
   // Enrich members with user names
@@ -158,12 +210,87 @@ async function getCampaign(event) {
     body: {
       campaign: campaignResult.Item,
       members,
+      sessions: sessionsResult.Items || [],
+      currentUser: {
+        isMember: !!membership.Item,
+        role: membership.Item?.role || null,
+      },
     },
   };
 }
 
 // ---------------------------------------------------------------------------
-// POST /campaigns/:campaignId/members — Add a member to a campaign
+// POST /campaigns/:campaignId/join — Self-join a public campaign as player
+// ---------------------------------------------------------------------------
+async function joinCampaign(event) {
+  const user = await authenticate(event);
+  if (!user) return { statusCode: 401, body: { error: 'Unauthorized' } };
+
+  const { campaignId } = event.pathParams;
+
+  // Verify campaign exists and is public
+  const campaignResult = await db.get({
+    TableName: TABLE_CAMPAIGNS,
+    Key: { campaignId },
+  });
+  if (!campaignResult.Item) {
+    return { statusCode: 404, body: { error: 'Campaign not found' } };
+  }
+  if ((campaignResult.Item.visibility || 'public') !== 'public') {
+    return { statusCode: 403, body: { error: 'This campaign is not open for joining' } };
+  }
+
+  // Check if already a member
+  const existing = await db.get({
+    TableName: TABLE_CAMPAIGN_MEMBERS,
+    Key: { campaignId, userId: user.sub },
+  });
+  if (existing.Item) {
+    return { statusCode: 409, body: { error: 'Already a member of this campaign' } };
+  }
+
+  const now = new Date().toISOString();
+  await db.put({
+    TableName: TABLE_CAMPAIGN_MEMBERS,
+    Item: { campaignId, userId: user.sub, role: 'player', joinedAt: now },
+  });
+
+  return {
+    statusCode: 201,
+    body: { campaignId, userId: user.sub, role: 'player', joinedAt: now },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// POST /campaigns/:campaignId/leave — Leave a campaign (GM cannot leave)
+// ---------------------------------------------------------------------------
+async function leaveCampaign(event) {
+  const user = await authenticate(event);
+  if (!user) return { statusCode: 401, body: { error: 'Unauthorized' } };
+
+  const { campaignId } = event.pathParams;
+
+  const membership = await db.get({
+    TableName: TABLE_CAMPAIGN_MEMBERS,
+    Key: { campaignId, userId: user.sub },
+  });
+  if (!membership.Item) {
+    return { statusCode: 404, body: { error: 'Not a member of this campaign' } };
+  }
+  if (membership.Item.role === 'gm') {
+    return { statusCode: 403, body: { error: 'GM cannot leave the campaign' } };
+  }
+
+  await db.delete({
+    TableName: TABLE_CAMPAIGN_MEMBERS,
+    Key: { campaignId, userId: user.sub },
+  });
+
+  return { body: { message: 'Left campaign' } };
+}
+
+// ---------------------------------------------------------------------------
+// POST /campaigns/:campaignId/members — Add a member (GM only)
 // ---------------------------------------------------------------------------
 async function addMember(event) {
   const user = await authenticate(event);
@@ -176,13 +303,13 @@ async function addMember(event) {
     return { statusCode: 400, body: { error: 'userId is required' } };
   }
 
-  // Verify the requester is a member of this campaign
+  // Only GMs can add members directly
   const membership = await db.get({
     TableName: TABLE_CAMPAIGN_MEMBERS,
     Key: { campaignId, userId: user.sub },
   });
-  if (!membership.Item) {
-    return { statusCode: 403, body: { error: 'Not a member of this campaign' } };
+  if (!membership.Item || membership.Item.role !== 'gm') {
+    return { statusCode: 403, body: { error: 'Only the GM can add members' } };
   }
 
   // Verify the target user exists
@@ -238,12 +365,33 @@ async function removeMember(event) {
 }
 
 // ---------------------------------------------------------------------------
+// GET /users — List all registered users (for GM user picker)
+// ---------------------------------------------------------------------------
+async function listUsers(event) {
+  const user = await authenticate(event);
+  if (!user) return { statusCode: 401, body: { error: 'Unauthorized' } };
+
+  const result = await db.scan({ TableName: TABLE_USERS });
+  const users = (result.Items || []).map((u) => ({
+    userId: u.userId,
+    name: u.name,
+    email: u.email,
+  }));
+
+  return { body: { users } };
+}
+
+// ---------------------------------------------------------------------------
 // Route definitions
 // ---------------------------------------------------------------------------
 export const campaignRoutes = [
   ['POST', '/campaigns', createCampaign],
   ['GET', '/campaigns', listCampaigns],
+  ['GET', '/campaigns/browse', browseCampaigns],     // Must be before :campaignId
   ['GET', '/campaigns/:campaignId', getCampaign],
+  ['POST', '/campaigns/:campaignId/join', joinCampaign],
+  ['POST', '/campaigns/:campaignId/leave', leaveCampaign],
   ['POST', '/campaigns/:campaignId/members', addMember],
   ['DELETE', '/campaigns/:campaignId/members/:userId', removeMember],
+  ['GET', '/users', listUsers],
 ];

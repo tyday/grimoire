@@ -8,6 +8,8 @@ and this project uses phase-based versioning aligned with the roadmap.
 ## [0.6.0] - 2026-03-20
 
 ### Added
+- GM can change a member's role between GM and Player (clickable badge toggle)
+- `PATCH /campaigns/:campaignId/members/:userId` endpoint for role changes
 - Browse all public campaigns from a new "Browse All" page
 - Self-join and leave campaigns (players only — GM cannot leave)
 - Campaign detail page now shows upcoming and past sessions

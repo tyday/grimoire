@@ -9,6 +9,7 @@
 //   POST   /campaigns/:campaignId/join      - Self-join a public campaign as player
 //   POST   /campaigns/:campaignId/leave     - Leave a campaign (GM cannot leave)
 //   POST   /campaigns/:campaignId/members   - Add a member (GM only)
+//   PATCH  /campaigns/:campaignId/members/:userId - Change a member's role (GM only)
 //   DELETE /campaigns/:campaignId/members/:userId - Remove a member
 //   GET    /users                           - List all registered users
 // =============================================================================
@@ -339,6 +340,54 @@ async function addMember(event) {
 }
 
 // ---------------------------------------------------------------------------
+// PATCH /campaigns/:campaignId/members/:userId — Change a member's role (GM only)
+// ---------------------------------------------------------------------------
+async function updateMemberRole(event) {
+  const user = await authenticate(event);
+  if (!user) return { statusCode: 401, body: { error: 'Unauthorized' } };
+
+  const { campaignId, userId } = event.pathParams;
+  const { role } = parseBody(event);
+
+  if (role !== 'gm' && role !== 'player') {
+    return { statusCode: 400, body: { error: 'Role must be "gm" or "player"' } };
+  }
+
+  // Only GMs can change roles
+  const membership = await db.get({
+    TableName: TABLE_CAMPAIGN_MEMBERS,
+    Key: { campaignId, userId: user.sub },
+  });
+  if (!membership.Item || membership.Item.role !== 'gm') {
+    return { statusCode: 403, body: { error: 'Only the GM can change roles' } };
+  }
+
+  // Can't change your own role (prevents GM from demoting themselves)
+  if (userId === user.sub) {
+    return { statusCode: 400, body: { error: 'Cannot change your own role' } };
+  }
+
+  // Verify target is a member
+  const target = await db.get({
+    TableName: TABLE_CAMPAIGN_MEMBERS,
+    Key: { campaignId, userId },
+  });
+  if (!target.Item) {
+    return { statusCode: 404, body: { error: 'Member not found' } };
+  }
+
+  await db.update({
+    TableName: TABLE_CAMPAIGN_MEMBERS,
+    Key: { campaignId, userId },
+    UpdateExpression: 'SET #r = :role',
+    ExpressionAttributeNames: { '#r': 'role' },
+    ExpressionAttributeValues: { ':role': role },
+  });
+
+  return { body: { campaignId, userId, role } };
+}
+
+// ---------------------------------------------------------------------------
 // DELETE /campaigns/:campaignId/members/:userId — Remove a member
 // ---------------------------------------------------------------------------
 async function removeMember(event) {
@@ -392,6 +441,7 @@ export const campaignRoutes = [
   ['POST', '/campaigns/:campaignId/join', joinCampaign],
   ['POST', '/campaigns/:campaignId/leave', leaveCampaign],
   ['POST', '/campaigns/:campaignId/members', addMember],
+  ['PATCH', '/campaigns/:campaignId/members/:userId', updateMemberRole],
   ['DELETE', '/campaigns/:campaignId/members/:userId', removeMember],
   ['GET', '/users', listUsers],
 ];

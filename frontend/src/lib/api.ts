@@ -186,6 +186,17 @@ export async function addCampaignMember(campaignId: string, userId: string, role
   }
 }
 
+export async function updateMemberRole(campaignId: string, userId: string, role: 'gm' | 'player'): Promise<void> {
+  const res = await apiFetch(`/campaigns/${campaignId}/members/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to update role');
+  }
+}
+
 export async function removeCampaignMember(campaignId: string, userId: string): Promise<void> {
   const res = await apiFetch(`/campaigns/${campaignId}/members/${userId}`, {
     method: 'DELETE',

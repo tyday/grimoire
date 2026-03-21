@@ -629,6 +629,15 @@ a.card:hover {
   border: 1px solid rgba(154, 145, 138, 0.2);
 }
 
+.badge-clickable {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.badge-clickable:hover:not(:disabled) {
+  opacity: 0.7;
+}
+
 /* --------------------------------------------------------------------------
    Poll voting
    -------------------------------------------------------------------------- */

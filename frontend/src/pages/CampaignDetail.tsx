@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router';
 import { useAuth } from '../lib/auth.tsx';
 import { useOnline } from '../lib/useOnline.ts';
 import { useCampaign } from '../lib/campaign.tsx';
-import { getCampaign, removeCampaignMember, joinCampaign, leaveCampaign, addCampaignMember, getUsers } from '../lib/api.ts';
+import { getCampaign, removeCampaignMember, updateMemberRole, joinCampaign, leaveCampaign, addCampaignMember, getUsers } from '../lib/api.ts';
 import type { Campaign, CampaignMember, Session, User } from '../lib/types.ts';
 
 function formatDate(dateStr: string): string {
@@ -94,6 +94,17 @@ export default function CampaignDetail() {
       }
     } catch (err) {
       console.error('Failed to remove member:', err);
+    }
+  }
+
+  async function handleRoleChange(userId: string, newRole: 'gm' | 'player') {
+    if (!campaignId) return;
+    setError('');
+    try {
+      await updateMemberRole(campaignId, userId, newRole);
+      setMembers(members.map((m) => (m.userId === userId ? { ...m, role: newRole } : m)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update role');
     }
   }
 
@@ -207,9 +218,20 @@ export default function CampaignDetail() {
                   <h4 className="card-title">{member.name}</h4>
                 </div>
                 <div className="member-actions">
-                  <span className={`badge ${member.role === 'gm' ? 'badge-gold' : 'badge-dim'}`}>
-                    {member.role === 'gm' ? 'GM' : 'Player'}
-                  </span>
+                  {isGM && member.userId !== user?.userId ? (
+                    <button
+                      className={`badge ${member.role === 'gm' ? 'badge-gold' : 'badge-dim'} badge-clickable`}
+                      onClick={() => handleRoleChange(member.userId, member.role === 'gm' ? 'player' : 'gm')}
+                      disabled={!online}
+                      title={`Switch to ${member.role === 'gm' ? 'Player' : 'GM'}`}
+                    >
+                      {member.role === 'gm' ? 'GM' : 'Player'}
+                    </button>
+                  ) : (
+                    <span className={`badge ${member.role === 'gm' ? 'badge-gold' : 'badge-dim'}`}>
+                      {member.role === 'gm' ? 'GM' : 'Player'}
+                    </span>
+                  )}
                   {isGM && member.userId !== user?.userId && (
                     <button
                       className="btn-ghost btn-sm btn-danger"

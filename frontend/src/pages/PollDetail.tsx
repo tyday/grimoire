@@ -33,6 +33,9 @@ export default function PollDetail() {
   // Confirm state
   const [confirmDate, setConfirmDate] = useState('');
 
+  // Share state
+  const [copied, setCopied] = useState(false);
+
   const loadPoll = useCallback(async () => {
     if (!pollId) return;
     try {
@@ -144,6 +147,19 @@ export default function PollDetail() {
   const isCreator = poll.creatorId === user?.userId;
   const isActive = poll.status === 'active';
 
+  async function handleShare() {
+    const url = `${window.location.origin}/polls/${pollId}`;
+    const shareData = { title: poll!.title, text: `Vote on: ${poll!.title}`, url };
+
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
   // For open mode: collect all dates across responses and count availability
   const openDateCounts: Record<string, number> = {};
   if (poll.mode === 'open') {
@@ -159,9 +175,14 @@ export default function PollDetail() {
     <div className="poll-detail">
       <div className="page-header">
         <h2>{poll.title}</h2>
-        <span className={`badge ${poll.status === 'active' ? 'badge-active' : 'badge-confirmed'}`}>
-          {poll.status}
-        </span>
+        <div className="page-header-actions">
+          <button className="btn btn-outline btn-sm" onClick={handleShare}>
+            {copied ? 'Copied!' : 'Share'}
+          </button>
+          <span className={`badge ${poll.status === 'active' ? 'badge-active' : 'badge-confirmed'}`}>
+            {poll.status}
+          </span>
+        </div>
       </div>
 
       {error && <div className="form-error">{error}</div>}

@@ -7,7 +7,7 @@
 //   - Sending credentials (cookies) for refresh token flow
 // =============================================================================
 
-import type { Campaign, CampaignMember, Poll, PollResponse, Session, SessionNote, User } from './types.ts';
+import type { BrowseCampaign, Campaign, CampaignMember, Poll, PollResponse, Session, SessionNote, User } from './types.ts';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -125,10 +125,42 @@ export async function getCampaigns(): Promise<Campaign[]> {
   return data.campaigns;
 }
 
-export async function getCampaign(campaignId: string): Promise<{ campaign: Campaign; members: CampaignMember[] }> {
+export async function getCampaign(
+  campaignId: string,
+): Promise<{ campaign: Campaign; members: CampaignMember[]; sessions: Session[]; currentUser: { isMember: boolean; role: string | null } }> {
   const res = await apiFetch(`/campaigns/${campaignId}`);
   if (!res.ok) throw new Error('Failed to fetch campaign');
   return res.json();
+}
+
+export async function browseCampaigns(): Promise<BrowseCampaign[]> {
+  const res = await apiFetch('/campaigns/browse');
+  if (!res.ok) throw new Error('Failed to browse campaigns');
+  const data = await res.json();
+  return data.campaigns;
+}
+
+export async function joinCampaign(campaignId: string): Promise<void> {
+  const res = await apiFetch(`/campaigns/${campaignId}/join`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to join campaign');
+  }
+}
+
+export async function leaveCampaign(campaignId: string): Promise<void> {
+  const res = await apiFetch(`/campaigns/${campaignId}/leave`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to leave campaign');
+  }
+}
+
+export async function getUsers(): Promise<User[]> {
+  const res = await apiFetch('/users');
+  if (!res.ok) throw new Error('Failed to fetch users');
+  const data = await res.json();
+  return data.users;
 }
 
 export async function createCampaign(name: string, description?: string): Promise<Campaign> {

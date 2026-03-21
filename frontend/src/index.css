@@ -507,6 +507,12 @@ select.field-input {
   margin-bottom: 24px;
 }
 
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .section {
   margin-bottom: 28px;
 }
@@ -902,6 +908,20 @@ a.card:hover {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.add-member-picker {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.add-member-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 /* --------------------------------------------------------------------------

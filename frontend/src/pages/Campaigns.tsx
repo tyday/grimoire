@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { useOnline } from '../lib/useOnline.ts';
 import { useCampaign } from '../lib/campaign.tsx';
 import { createCampaign } from '../lib/api.ts';
@@ -40,12 +40,15 @@ export default function Campaigns() {
   return (
     <div className="campaigns-page">
       <div className="page-header">
-        <h2>Campaigns</h2>
-        {!showCreate && (
-          online
-            ? <button className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>New Campaign</button>
-            : <button className="btn btn-primary btn-sm" disabled>Offline</button>
-        )}
+        <h2>My Campaigns</h2>
+        <div className="page-header-actions">
+          <Link to="/campaigns/browse" className="btn btn-outline btn-sm">Browse All</Link>
+          {!showCreate && (
+            online
+              ? <button className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>New Campaign</button>
+              : <button className="btn btn-primary btn-sm" disabled>Offline</button>
+          )}
+        </div>
       </div>
 
       {showCreate && (

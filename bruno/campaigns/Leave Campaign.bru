@@ -1,0 +1,15 @@
+meta {
+  name: Leave Campaign
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/campaigns/{{campaignId}}/leave
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

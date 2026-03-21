@@ -1,0 +1,15 @@
+meta {
+  name: Browse Campaigns
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/campaigns/browse
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

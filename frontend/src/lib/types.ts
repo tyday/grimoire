@@ -10,7 +10,19 @@ export interface Campaign {
   description: string;
   createdBy: string;
   createdAt: string;
+  visibility?: 'public' | 'private';
   role?: 'gm' | 'player'; // Included when listing user's campaigns
+}
+
+export interface BrowseCampaign {
+  campaignId: string;
+  name: string;
+  description: string;
+  createdAt: string;
+  visibility: 'public' | 'private';
+  memberCount: number;
+  isMember: boolean;
+  role: 'gm' | 'player' | null;
 }
 
 export interface CampaignMember {

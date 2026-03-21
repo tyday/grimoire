@@ -13,6 +13,7 @@ vi.mock('../lib/api.ts', () => ({
   tryRefresh: vi.fn().mockResolvedValue(true),
   logout: vi.fn(),
   setAccessToken: vi.fn(),
+  setOnAuthFailure: vi.fn(),
 }));
 
 // Mock push module

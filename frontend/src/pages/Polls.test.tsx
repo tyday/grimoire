@@ -10,6 +10,7 @@ vi.mock('../lib/api.ts', () => ({
   tryRefresh: vi.fn().mockResolvedValue(false),
   logout: vi.fn(),
   setAccessToken: vi.fn(),
+  setOnAuthFailure: vi.fn(),
 }));
 
 import * as api from '../lib/api.ts';

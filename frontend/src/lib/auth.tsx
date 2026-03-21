@@ -11,6 +11,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { ReactNode } from 'react';
 import type { User } from './types.ts';
 import * as api from './api.ts';
+import { setOnAuthFailure } from './api.ts';
 
 interface AuthContextType {
   user: User | null;
@@ -60,6 +61,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     localStorage.removeItem(USER_STORAGE_KEY);
   }, []);
+
+  // Force logout when refresh token fails (e.g. another device rotated it)
+  const forceLogout = useCallback(() => {
+    api.setAccessToken(null);
+    setUser(null);
+    localStorage.removeItem(USER_STORAGE_KEY);
+  }, []);
+
+  useEffect(() => {
+    setOnAuthFailure(forceLogout);
+    return () => setOnAuthFailure(null);
+  }, [forceLogout]);
 
   const setUserAndPersist = useCallback((u: User) => {
     setUser(u);

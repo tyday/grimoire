@@ -19,6 +19,13 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+// Called when a refresh token fails — lets the auth context force a logout.
+let onAuthFailure: (() => void) | null = null;
+
+export function setOnAuthFailure(callback: (() => void) | null) {
+  onAuthFailure = callback;
+}
+
 // ---------------------------------------------------------------------------
 // Core fetch wrapper
 // ---------------------------------------------------------------------------
@@ -48,6 +55,8 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
         credentials: 'include',
       });
     }
+    // Refresh failed — session is dead, force logout
+    onAuthFailure?.();
   }
 
   return response;
